@@ -17,3 +17,5 @@ urlpatterns = [
     # 단일 게시글에서 댓글 생성
     path('articles/<int:article_pk>/comments/', views.comment_create),
 ]
+
+updateupdate
