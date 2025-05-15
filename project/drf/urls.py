@@ -25,6 +25,7 @@ from django.urls import path, include
 # 유빈이가 프론트 개발
 # API 개발 할 때 다른 개발자(유빈이)가 API사용법을 알고 있어야한다
 # 수동으로 직접 API문서를 작성하면 시간이 많이 들고, 문서 업데이트하는데 번거롭다
+# 수정수정
 
 urlpatterns = [
     path('admin/', admin.site.urls),
