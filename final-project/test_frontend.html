@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Frontend Authentication Test</h1>
+    
+    <div id="status"></div>
+    
+    <div>
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" value="testuser">
+        <input type="password" id="password" placeholder="Password" value="testpass123">
+        <button onclick="login()">Login</button>
+    </div>
+    
+    <div>
+        <h2>Current User</h2>
+        <button onclick="getCurrentUser()">Get Current User</button>
+        <div id="userInfo"></div>
+    </div>
+    
+    <div>
+        <h2>Create Post</h2>
+        <input type="text" id="title" placeholder="Title" value="Test Post">
+        <textarea id="content" placeholder="Content">Test content</textarea>
+        <button onclick="createPost()">Create Post</button>
+    </div>
+
+    <script>
+        // Axios 설정
+        axios.defaults.baseURL = 'http://localhost:8000';
+        axios.defaults.withCredentials = true;
+        
+        let csrfToken = null;
+        
+        const getCsrfToken = async () => {
+            try {
+                const response = await axios.get('/api/accounts/csrf-token/');
+                csrfToken = response.data.csrfToken;
+                return csrfToken;
+            } catch (error) {
+                console.error('CSRF 토큰 가져오기 실패:', error);
+                return null;
+            }
+        };
+        
+        const updateStatus = (message) => {
+            document.getElementById('status').innerHTML = message;
+        };
+        
+        const login = async () => {
+            try {
+                const token = await getCsrfToken();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                const response = await axios.post('/api/accounts/login/', {
+                    username,
+                    password
+                }, {
+                    headers: {
+                        'X-CSRFToken': token
+                    }
+                });
+                
+                updateStatus('로그인 성공: ' + JSON.stringify(response.data));
+            } catch (error) {
+                updateStatus('로그인 실패: ' + error.message);
+                console.error(error);
+            }
+        };
+        
+        const getCurrentUser = async () => {
+            try {
+                const response = await axios.get('/api/accounts/current-user/');
+                document.getElementById('userInfo').innerHTML = JSON.stringify(response.data, null, 2);
+                updateStatus('사용자 정보 가져오기 성공');
+            } catch (error) {
+                updateStatus('사용자 정보 가져오기 실패: ' + error.message);
+                console.error(error);
+            }
+        };
+        
+        const createPost = async () => {
+            try {
+                const token = await getCsrfToken();
+                const title = document.getElementById('title').value;
+                const content = document.getElementById('content').value;
+                
+                const response = await axios.post('/api/community/posts/', {
+                    category: 'free',
+                    title,
+                    content
+                }, {
+                    headers: {
+                        'X-CSRFToken': token
+                    }
+                });
+                
+                updateStatus('게시글 작성 성공: ' + JSON.stringify(response.data));
+            } catch (error) {
+                updateStatus('게시글 작성 실패: ' + error.message);
+                console.error(error);
+            }
+        };
+        
+        // 페이지 로드 시 현재 사용자 정보 확인
+        window.onload = () => {
+            getCurrentUser();
+        };
+    </script>
+</body>
+</html>
