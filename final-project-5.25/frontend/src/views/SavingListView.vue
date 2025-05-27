@@ -2,25 +2,35 @@
   <div class="container">
     <div class="header">
       <h1>예금/적금 상품 목록</h1>
-      <div class="filter-buttons">
-        <button 
-          :class="['filter-btn', { active: selectedFilter === 'all' }]"
-          @click="setFilter('all')"
-        >
-          전체
-        </button>
-        <button 
-          :class="['filter-btn', { active: selectedFilter === '예금' }]"
-          @click="setFilter('예금')"
-        >
-          예금
-        </button>
-        <button 
-          :class="['filter-btn', { active: selectedFilter === '적금' }]"
-          @click="setFilter('적금')"
-        >
-          적금
-        </button>
+      <div class="filter-controls">
+        <div class="filter-buttons">
+          <button 
+            :class="['filter-btn', { active: selectedFilter === 'all' }]"
+            @click="setFilter('all')"
+          >
+            전체
+          </button>
+          <button 
+            :class="['filter-btn', { active: selectedFilter === '예금' }]"
+            @click="setFilter('예금')"
+          >
+            예금
+          </button>
+          <button 
+            :class="['filter-btn', { active: selectedFilter === '적금' }]"
+            @click="setFilter('적금')"
+          >
+            적금
+          </button>
+        </div>
+        <div class="sort-dropdown">
+          <select v-model="selectedSort" @change="handleSortChange" class="sort-select">
+            <option value="default">최신순 (기본)</option>
+            <option value="recommendations">추천순</option>
+            <option value="views">인기순</option>
+            <option value="interest_rate">고금리순</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -84,9 +94,11 @@ import { useRouter } from "vue-router";
 const productList = ref([]);
 const loading = ref(true);
 const selectedFilter = ref('all');
+const selectedSort = ref('default'); // 정렬 기준 ref 추가
 const router = useRouter();
 
 const filteredProducts = computed(() => {
+  // 정렬은 API에서 처리하므로, 여기서는 product_type 필터링만 수행
   if (selectedFilter.value === 'all') {
     return productList.value;
   }
@@ -96,12 +108,16 @@ const filteredProducts = computed(() => {
 const getProducts = async () => {
   try {
     loading.value = true;
-    const res = await axios.get(
-      "http://127.0.0.1:8000/saving/combined-products/"
-    );
-    productList.value = res.data.response.result.baseList;
+    let apiUrl = "http://127.0.0.1:8000/saving/combined-products/";
+    if (selectedSort.value !== 'default') {
+      apiUrl += `?sort_by=${selectedSort.value}`;
+    }
+    const res = await axios.get(apiUrl);
+    // API 응답 구조가 res.data.result.baseList로 변경되었으므로 수정
+    productList.value = res.data.result.baseList; 
   } catch (err) {
     console.error("상품 조회 실패", err);
+    productList.value = []; // 오류 발생 시 빈 배열로 초기화
   } finally {
     loading.value = false;
   }
@@ -109,6 +125,13 @@ const getProducts = async () => {
 
 const setFilter = (filter) => {
   selectedFilter.value = filter;
+  // 필터 변경 시에도 현재 정렬 기준으로 다시 상품 목록을 가져옴
+  // getProducts(); // 필터링은 computed 속성에서 처리하므로, API 재호출은 필요 없음.
+  // 만약 필터링도 API 레벨에서 하고 싶다면 getProducts 호출
+};
+
+const handleSortChange = () => {
+  getProducts(); // 정렬 기준 변경 시 API 다시 호출
 };
 
 const goDetail = (fin_prdt_cd) => {
@@ -140,12 +163,46 @@ onMounted(getProducts);
   text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
+.filter-controls {
+  display: flex;
+  justify-content: space-between; /* 버튼과 드롭다운을 양쪽으로 배치 */
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* 화면 작을 시 줄바꿈 */
+}
+
 .filter-buttons {
   display: flex;
   justify-content: center;
   gap: 15px;
-  margin-bottom: 20px;
+  margin-bottom: 10px; /* 모바일에서 드롭다운과의 간격 */
 }
+
+.sort-dropdown {
+  /* margin-left: auto; 드롭다운을 오른쪽으로 밀기 */
+}
+
+.sort-select {
+  padding: 12px 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  color: white;
+  border-radius: 25px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  min-width: 180px; /* 드롭다운 최소 너비 */
+}
+
+.sort-select:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.sort-select option {
+  background: #4a5568; /* 어두운 배경색 */
+  color: white;
+}
+
 
 .filter-btn {
   padding: 12px 24px;

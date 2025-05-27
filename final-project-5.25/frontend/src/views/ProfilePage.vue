@@ -368,6 +368,48 @@
           </p>
         </div>
 
+        <!-- 추천 유튜브 영상 섹션 -->
+        <div class="section" v-if="isOwnProfile && (recommendedVideosLoading || recommendedVideos.length > 0)">
+          <h3 class="section-title">
+            <i class="fas fa-video"></i>
+            추천 영상
+          </h3>
+          <div v-if="recommendedVideosLoading" class="loading-section small-spinner">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">추천 영상을 불러오는 중...</p>
+          </div>
+          <div v-else-if="recommendedVideos.length > 0" class="video-grid">
+            <div
+              v-for="video in recommendedVideos"
+              :key="video.video_id"
+              class="video-card"
+              @click="openVideo(video)"
+            >
+              <div class="video-thumbnail">
+                <img
+                  :src="video.thumbnail_url || getYoutubeThumbnail(video.video_id)"
+                  :alt="video.title"
+                  @error="handleVideoImageError"
+                />
+                <!-- <div class="video-duration">{{ video.duration }}</div> -->
+                <!-- 추천 영상에서는 duration, view_count 등 상세 정보가 없을 수 있음 -->
+              </div>
+              <div class="video-content">
+                <h4 class="video-title">{{ video.title }}</h4>
+                <p class="video-channel">{{ video.channel_title }}</p>
+                <!-- <div class="video-meta">
+                  <span class="video-views">조회수 {{ formatViews(video.view_count) }}</span>
+                  <span class="video-date">{{ formatDate(video.published_at) }}</span>
+                </div> -->
+              </div>
+              <!-- 추천 영상에는 별도 액션 버튼 (예: 나중에 보기 추가)이 필요하면 여기에 추가 -->
+            </div>
+          </div>
+          <p v-else class="text-muted">
+            추천할 영상이 없거나, 관심/보유 주식을 추가해주세요.
+          </p>
+        </div>
+
         <!-- 내가 작성한 글 섹션 -->
         <div class="section">
           <h3 class="section-title">
@@ -592,7 +634,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute, RouterLink } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import axios from "axios";
@@ -632,6 +674,9 @@ const userPosts = ref([]);
 const showAllScrapped = ref(false);
 const showAllUserPosts = ref(false);
 
+const recommendedVideos = ref([]);
+const recommendedVideosLoading = ref(false);
+
 const loaded = ref(false);
 
 const isOwnProfile = computed(
@@ -661,9 +706,12 @@ onMounted(async () => {
         loadRelatedNews(),
         loadScrappedPosts(true),
         loadUserPosts(true),
+        loadRecommendedVideos(), // 추천 영상 로드 추가
       ]);
     } else {
       await loadUserPosts(true);
+      // 타인 프로필의 경우, 공개된 관심/보유 주식 기반 추천은 현재 User 모델에 공개 필드가 없으므로 생략
+      // 만약 공개 주식 정보가 있다면 여기서 호출 가능
     }
   } catch (err) {
     console.error("프로필 조회 실패:", err);
@@ -678,6 +726,85 @@ onMounted(async () => {
     loaded.value = true;
   }
 });
+
+// profile.owned_stocks 또는 profile.interested_stocks가 변경될 때 추천 영상을 다시 로드
+watch(
+  () => [profile.value.owned_stocks, profile.value.interested_stocks],
+  async (newStocks, oldStocks) => {
+    // 초기 로드 시에는 onMounted에서 이미 호출되므로, 변경 시에만 호출
+    if (loaded.value && isOwnProfile.value) {
+      // 배열 내용 비교를 위해 JSON.stringify 사용 (더 정교한 비교가 필요할 수 있음)
+      if (JSON.stringify(newStocks) !== JSON.stringify(oldStocks)) {
+        await loadRecommendedVideos();
+      }
+    }
+  },
+  { deep: true }
+);
+
+const loadRecommendedVideos = async () => {
+  if (!isOwnProfile.value) return;
+
+  recommendedVideosLoading.value = true;
+  recommendedVideos.value = [];
+  const stockKeywords = new Set();
+
+  (profile.value.owned_stocks || []).forEach(stock => {
+    if (stock && stock.name) {
+      stockKeywords.add(stock.name);
+    }
+  });
+  (profile.value.interested_stocks || []).forEach(stockName => {
+    if (stockName) {
+      stockKeywords.add(stockName);
+    }
+  });
+
+  if (stockKeywords.size === 0) {
+    recommendedVideosLoading.value = false;
+    return;
+  }
+
+  const videoResults = [];
+  const videoIds = new Set(); // 중복 영상 제거용
+
+  try {
+    for (const keyword of stockKeywords) {
+      // 각 키워드에 대해 유튜브 검색 (예: "삼성전자 주식")
+      const searchQuery = `${keyword} 주식`; // 검색어 예시, 필요시 조정
+      try {
+        const response = await axios.get("/api/youtube/search/", {
+          params: { q: searchQuery, maxResults: 3 }, // 주식당 3개 영상
+        });
+        if (response.data && response.data.items) {
+          response.data.items.forEach(item => {
+            if (item.id && item.id.videoId && !videoIds.has(item.id.videoId)) {
+              videoIds.add(item.id.videoId);
+              videoResults.push({
+                video_id: item.id.videoId,
+                title: item.snippet.title,
+                channel_title: item.snippet.channelTitle,
+                thumbnail_url: item.snippet.thumbnails.medium.url, // 또는 high
+                // published_at: item.snippet.publishedAt, // 필요시 추가
+                // duration, view_count 등은 상세 API 호출 필요 (여기서는 목록 API 결과만 사용)
+              });
+            }
+          });
+        }
+      } catch (searchError) {
+        console.error(`Error searching YouTube for ${keyword}:`, searchError);
+        // 개별 검색 실패 시 계속 진행
+      }
+    }
+    // 전체 영상 개수 제한 (예: 최대 10개)
+    recommendedVideos.value = videoResults.slice(0, 10);
+  } catch (error) {
+    console.error("Error loading recommended videos:", error);
+    recommendedVideos.value = [];
+  } finally {
+    recommendedVideosLoading.value = false;
+  }
+};
 
 const loadActivities = async () => {
   try {
@@ -1845,6 +1972,18 @@ const handleChannelImageError = (event) => {
   color: white;
   font-size: 1.1rem;
 }
+
+.loading-section.small-spinner .loading-spinner {
+  width: 30px;
+  height: 30px;
+  border-width: 3px;
+  margin-bottom: 10px;
+}
+.loading-section.small-spinner .loading-text {
+  font-size: 0.9rem;
+  color: #555; /* 흰색 배경이므로 어두운 색으로 변경 */
+}
+
 
 @keyframes spin {
   0% {
