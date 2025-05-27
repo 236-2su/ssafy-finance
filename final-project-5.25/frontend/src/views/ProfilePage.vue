@@ -330,6 +330,57 @@
           </p>
         </div>
 
+        <!-- 추천 유튜브 영상 섹션 -->
+        <div class="section" v-if="isOwnProfile && (recommendedVideosLoading || recommendedVideos.length > 0)">
+          <h3 class="section-title">
+            <i class="fas fa-video"></i>
+            추천 영상
+          </h3>
+          <div v-if="recommendedVideosLoading" class="loading-section small-spinner">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">추천 영상을 불러오는 중...</p>
+          </div>
+          <div v-else-if="recommendedVideos.length > 0">
+            <div class="video-grid">
+              <div
+                v-for="video in (showAllRecommendedVideos ? recommendedVideos : recommendedVideos.slice(0, 6))"
+              :key="video.video_id"
+              class="video-card"
+              @click="openVideo(video)"
+            >
+              <div class="video-thumbnail">
+                <img
+                  :src="video.thumbnail_url || getYoutubeThumbnail(video.video_id)"
+                  :alt="video.title"
+                  @error="handleVideoImageError"
+                />
+                <!-- <div class="video-duration">{{ video.duration }}</div> -->
+                <!-- 추천 영상에서는 duration, view_count 등 상세 정보가 없을 수 있음 -->
+              </div>
+              <div class="video-content">
+                <h4 class="video-title">{{ video.title }}</h4>
+                <p class="video-channel">{{ video.channel_title }}</p>
+                <!-- <div class="video-meta">
+                  <span class="video-views">조회수 {{ formatViews(video.view_count) }}</span>
+                  <span class="video-date">{{ formatDate(video.published_at) }}</span>
+                </div> -->
+              </div>
+              <!-- 추천 영상에는 별도 액션 버튼 (예: 나중에 보기 추가)이 필요하면 여기에 추가 -->
+            </div>
+            </div>
+            <button
+              v-if="recommendedVideos.length > 6"
+              @click="showAllRecommendedVideos = !showAllRecommendedVideos"
+              class="btn btn-outline-secondary mt-3"
+            >
+              {{ showAllRecommendedVideos ? "간략히 보기" : "더보기" }}
+            </button>
+          </div>
+          <p v-else class="text-muted">
+            추천할 영상이 없거나, 관심/보유 주식을 추가해주세요.
+          </p>
+        </div>
+
         <!-- 스크랩한 글 섹션 -->
         <div class="section" v-if="isOwnProfile">
           <h3 class="section-title">
@@ -365,48 +416,6 @@
           </button>
           <p v-if="scrappedPosts.length === 0" class="text-muted">
             스크랩한 글이 없습니다.
-          </p>
-        </div>
-
-        <!-- 추천 유튜브 영상 섹션 -->
-        <div class="section" v-if="isOwnProfile && (recommendedVideosLoading || recommendedVideos.length > 0)">
-          <h3 class="section-title">
-            <i class="fas fa-video"></i>
-            추천 영상
-          </h3>
-          <div v-if="recommendedVideosLoading" class="loading-section small-spinner">
-            <div class="loading-spinner"></div>
-            <p class="loading-text">추천 영상을 불러오는 중...</p>
-          </div>
-          <div v-else-if="recommendedVideos.length > 0" class="video-grid">
-            <div
-              v-for="video in recommendedVideos"
-              :key="video.video_id"
-              class="video-card"
-              @click="openVideo(video)"
-            >
-              <div class="video-thumbnail">
-                <img
-                  :src="video.thumbnail_url || getYoutubeThumbnail(video.video_id)"
-                  :alt="video.title"
-                  @error="handleVideoImageError"
-                />
-                <!-- <div class="video-duration">{{ video.duration }}</div> -->
-                <!-- 추천 영상에서는 duration, view_count 등 상세 정보가 없을 수 있음 -->
-              </div>
-              <div class="video-content">
-                <h4 class="video-title">{{ video.title }}</h4>
-                <p class="video-channel">{{ video.channel_title }}</p>
-                <!-- <div class="video-meta">
-                  <span class="video-views">조회수 {{ formatViews(video.view_count) }}</span>
-                  <span class="video-date">{{ formatDate(video.published_at) }}</span>
-                </div> -->
-              </div>
-              <!-- 추천 영상에는 별도 액션 버튼 (예: 나중에 보기 추가)이 필요하면 여기에 추가 -->
-            </div>
-          </div>
-          <p v-else class="text-muted">
-            추천할 영상이 없거나, 관심/보유 주식을 추가해주세요.
           </p>
         </div>
 
@@ -676,6 +685,7 @@ const showAllUserPosts = ref(false);
 
 const recommendedVideos = ref([]);
 const recommendedVideosLoading = ref(false);
+const showAllRecommendedVideos = ref(false); // 추천 영상 더보기 상태
 
 const loaded = ref(false);
 
@@ -796,8 +806,8 @@ const loadRecommendedVideos = async () => {
         // 개별 검색 실패 시 계속 진행
       }
     }
-    // 전체 영상 개수 제한 (예: 최대 10개)
-    recommendedVideos.value = videoResults.slice(0, 10);
+    // 전체 영상 개수 제한 없이 모든 결과를 일단 저장 (더보기 기능을 위해)
+    recommendedVideos.value = videoResults;
   } catch (error) {
     console.error("Error loading recommended videos:", error);
     recommendedVideos.value = [];
