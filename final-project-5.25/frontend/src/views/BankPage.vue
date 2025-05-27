@@ -4,7 +4,9 @@
       <div class="container">
         <div class="hero-content">
           <h1 class="hero-title">은행 찾기</h1>
-          <p class="hero-subtitle">가까운 은행과 ATM을 쉽고 빠르게 찾아보세요</p>
+          <p class="hero-subtitle">
+            가까운 은행과 ATM을 쉽고 빠르게 찾아보세요
+          </p>
         </div>
       </div>
     </div>
@@ -58,14 +60,16 @@
             <div class="select-wrapper">
               <select v-model="bankName" class="form-select">
                 <option value="">은행을 선택하세요</option>
-                <option v-for="b in bankInfo" :key="b" :value="b">{{ b }}</option>
+                <option v-for="b in bankInfo" :key="b" :value="b">
+                  {{ b }}
+                </option>
               </select>
               <i class="fas fa-chevron-down select-arrow"></i>
             </div>
           </div>
 
-          <button 
-            class="search-btn" 
+          <button
+            class="search-btn"
             @click="searchBanks"
             :disabled="!sido || !sigungu || !bankName"
           >
@@ -83,8 +87,8 @@
             </h4>
           </div>
           <div class="results-list">
-            <div 
-              v-for="(result, index) in searchResults" 
+            <div
+              v-for="(result, index) in searchResults"
               :key="index"
               class="result-item"
               @click="focusOnMarker(index)"
@@ -111,8 +115,8 @@
             인기 은행
           </h4>
           <div class="bank-tags">
-            <button 
-              v-for="bank in popularBanks" 
+            <button
+              v-for="bank in popularBanks"
               :key="bank"
               @click="selectBank(bank)"
               class="bank-tag"
@@ -130,13 +134,17 @@
           <p class="loading-text">지도를 불러오는 중...</p>
         </div>
         <div id="map" class="map-view"></div>
-        
+
         <!-- 지도 컨트롤 -->
         <div class="map-controls">
           <button @click="resetMapView" class="control-btn" title="지도 초기화">
             <i class="fas fa-home"></i>
           </button>
-          <button @click="getCurrentLocation" class="control-btn" title="현재 위치">
+          <button
+            @click="getCurrentLocation"
+            class="control-btn"
+            title="현재 위치"
+          >
             <i class="fas fa-crosshairs"></i>
           </button>
         </div>
@@ -151,6 +159,7 @@ import data from "@/data.json";
 
 // 환경변수
 const KAKAO_MAP_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
+console.log("Kakao Map Key:", KAKAO_MAP_KEY); // 키 값 확인용 로그
 
 // 지역 & 은행 목록
 const mapInfo = data.mapInfo;
@@ -162,7 +171,14 @@ const bankName = ref("");
 const searchResults = ref([]);
 
 // 인기 은행 목록
-const popularBanks = ["국민은행", "신한은행", "우리은행", "하나은행", "농협은행", "기업은행"];
+const popularBanks = [
+  "국민은행",
+  "신한은행",
+  "우리은행",
+  "하나은행",
+  "농협은행",
+  "기업은행",
+];
 
 // 지도 로딩 상태
 const kakaoLoaded = ref(false);
@@ -171,6 +187,11 @@ const markers = [];
 const infoWindows = [];
 
 onMounted(() => {
+  if (!KAKAO_MAP_KEY) {
+    alert("카카오맵 API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.");
+    kakaoLoaded.value = false; // 지도 로딩 실패로 처리
+    return;
+  }
   // Kakao Maps SDK 로드 (autoload=false 필수)
   const script = document.createElement("script");
   script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_MAP_KEY}&libraries=services&autoload=false`;
@@ -182,6 +203,7 @@ onMounted(() => {
         level: 4,
       });
       kakaoLoaded.value = true;
+      getCurrentLocation(); // 페이지 로드 시 현재 위치 표시
     });
   };
   document.head.appendChild(script);
@@ -211,50 +233,50 @@ function searchBanks() {
   }
 
   const ps = new kakao.maps.services.Places();
-  
+
   // 기존 마커와 정보창 제거
   clearMarkers();
   searchResults.value = [];
 
   const keyword = `${sido.value} ${sigungu.value} ${bankName.value}`;
-  
+
   ps.keywordSearch(keyword, (places, status) => {
     if (status !== kakao.maps.services.Status.OK) {
       alert("검색 결과가 없습니다.");
       return;
     }
-    
+
     searchResults.value = places;
     const bounds = new kakao.maps.LatLngBounds();
-    
+
     places.forEach((place, index) => {
       const pos = new kakao.maps.LatLng(place.y, place.x);
       bounds.extend(pos);
-      
+
       // 마커 생성
-      const marker = new kakao.maps.Marker({ 
-        map, 
+      const marker = new kakao.maps.Marker({
+        map,
         position: pos,
-        title: place.place_name
+        title: place.place_name,
       });
-      
+
       // 정보창 생성
       const infoWindow = new kakao.maps.InfoWindow({
         content: createInfoWindowContent(place),
-        removable: true
+        removable: true,
       });
-      
+
       markers.push(marker);
       infoWindows.push(infoWindow);
-      
+
       // 마커 클릭 이벤트
       kakao.maps.event.addListener(marker, "click", () => {
         // 다른 정보창 닫기
-        infoWindows.forEach(iw => iw.close());
+        infoWindows.forEach((iw) => iw.close());
         infoWindow.open(map, marker);
       });
     });
-    
+
     map.setBounds(bounds);
   });
 }
@@ -263,9 +285,17 @@ function searchBanks() {
 function createInfoWindowContent(place) {
   return `
     <div style="padding: 15px; min-width: 200px; font-family: 'Pretendard', sans-serif;">
-      <h5 style="margin: 0 0 8px 0; color: #333; font-weight: 600;">${place.place_name}</h5>
-      <p style="margin: 0 0 5px 0; color: #666; font-size: 0.9rem;">${place.address_name}</p>
-      ${place.phone ? `<p style="margin: 0; color: #667eea; font-size: 0.85rem;"><i class="fas fa-phone"></i> ${place.phone}</p>` : ''}
+      <h5 style="margin: 0 0 8px 0; color: #333; font-weight: 600;">${
+        place.place_name
+      }</h5>
+      <p style="margin: 0 0 5px 0; color: #666; font-size: 0.9rem;">${
+        place.address_name
+      }</p>
+      ${
+        place.phone
+          ? `<p style="margin: 0; color: #667eea; font-size: 0.85rem;"><i class="fas fa-phone"></i> ${place.phone}</p>`
+          : ""
+      }
     </div>
   `;
 }
@@ -275,20 +305,20 @@ function focusOnMarker(index) {
   if (markers[index]) {
     const marker = markers[index];
     const position = marker.getPosition();
-    
+
     map.setCenter(position);
     map.setLevel(3);
-    
+
     // 정보창 열기
-    infoWindows.forEach(iw => iw.close());
+    infoWindows.forEach((iw) => iw.close());
     infoWindows[index].open(map, marker);
   }
 }
 
 // 마커 및 정보창 제거
 function clearMarkers() {
-  markers.forEach(marker => marker.setMap(null));
-  infoWindows.forEach(infoWindow => infoWindow.close());
+  markers.forEach((marker) => marker.setMap(null));
+  infoWindows.forEach((infoWindow) => infoWindow.close());
   markers.length = 0;
   infoWindows.length = 0;
 }
@@ -311,20 +341,21 @@ function getCurrentLocation() {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         const currentPos = new kakao.maps.LatLng(lat, lng);
-        
+
         map.setCenter(currentPos);
         map.setLevel(3);
-        
+
         // 현재 위치 마커 추가
         const currentMarker = new kakao.maps.Marker({
           position: currentPos,
-          map: map
+          map: map,
         });
-        
+
         const infoWindow = new kakao.maps.InfoWindow({
-          content: '<div style="padding:10px; font-weight:600; color:#667eea;">현재 위치</div>'
+          content:
+            '<div style="padding:10px; font-weight:600; color:#667eea;">현재 위치</div>',
         });
-        
+
         infoWindow.open(map, currentMarker);
       },
       (error) => {
@@ -358,12 +389,12 @@ function getCurrentLocation() {
   font-weight: 800;
   color: white;
   margin-bottom: 20px;
-  text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .hero-subtitle {
   font-size: 1.2rem;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 40px;
   line-height: 1.6;
 }
@@ -377,7 +408,7 @@ function getCurrentLocation() {
 .bank-finder-container {
   display: flex;
   height: calc(100vh - 200px);
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 30px 30px 0 0;
   margin-top: -20px;
   backdrop-filter: blur(10px);
@@ -390,7 +421,7 @@ function getCurrentLocation() {
   padding: 30px;
   overflow-y: auto;
   border-right: 1px solid #e2e8f0;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
 }
 
 .search-header {
@@ -656,8 +687,12 @@ function getCurrentLocation() {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -691,7 +726,7 @@ function getCurrentLocation() {
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   color: #64748b;
 }
 
@@ -707,27 +742,27 @@ function getCurrentLocation() {
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .bank-finder-container {
     flex-direction: column;
     height: auto;
     min-height: calc(100vh - 200px);
   }
-  
+
   .search-sidebar {
     width: 100%;
     max-height: 400px;
   }
-  
+
   .map-container {
     height: 400px;
   }
-  
+
   .map-controls {
     top: 10px;
     right: 10px;
   }
-  
+
   .control-btn {
     width: 35px;
     height: 35px;

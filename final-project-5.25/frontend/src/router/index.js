@@ -14,7 +14,8 @@ import VideoDetailView from "@/views/VideoDetailView.vue";
 import SavingListView from "@/views/SavingListView.vue";
 import SavingDetailView from "@/views/SavingDetailView.vue";
 import SurveyPage from "@/views/SurveyPage.vue";
-import RecommendationPage from "@/views/RecommendationPage.vue";
+// import RecommendationPage from "@/views/RecommendationPage.vue"; // 기존 RecommendationPage는 더 이상 사용하지 않음
+import AiRecommendationPage from "@/views/AiRecommendationPage.vue"; // 새로운 AI 추천 페이지만 사용
 
 const routes = [
   { path: "/", name: "Main", component: MainPage },
@@ -80,10 +81,15 @@ const routes = [
     component: SurveyPage,
   },
   {
-    path: "/recommendations",
-    name: "Recommendations",
-    component: RecommendationPage,
+    path: "/recommendations", // 기존 경로 유지
+    name: "Recommendations", // 기존 이름 유지 또는 "AiRecommendation"으로 변경 가능
+    component: AiRecommendationPage, // 새로운 AI 추천 페이지 컴포넌트로 변경
   },
+  // { // /ai-recommendation 경로는 삭제
+  //   path: "/ai-recommendation",
+  //   name: "AiRecommendation",
+  //   component: AiRecommendationPage,
+  // },
 
   // 커뮤니티
   {

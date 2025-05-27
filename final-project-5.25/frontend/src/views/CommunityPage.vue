@@ -79,7 +79,9 @@
               <div class="post-header">
                 <div class="post-meta">
                   <span class="post-id">#{{ post.id }}</span>
-                  <span class="post-category">{{ categories[category] }}</span>
+                  <span class="post-category">{{
+                    categories[post.category] || "기타"
+                  }}</span>
                 </div>
                 <div class="post-author">
                   <RouterLink
@@ -88,9 +90,13 @@
                     @click.stop
                   >
                     <div class="author-avatar">
-                      {{ getAuthorInitial(post.author) }}
+                      {{
+                        getAuthorInitial(post.author_nickname || post.author)
+                      }}
                     </div>
-                    <span class="author-name">{{ post.author }}</span>
+                    <span class="author-name">{{
+                      post.author_nickname || post.author
+                    }}</span>
                   </RouterLink>
                 </div>
               </div>
@@ -107,14 +113,17 @@
                   <span class="stat-item">
                     <i class="fas fa-eye"></i>
                     {{ post.views || 0 }}
+                    <!-- API 응답에 'views' 필드가 없으므로 항상 0으로 표시될 것입니다. -->
                   </span>
                   <span class="stat-item">
                     <i class="fas fa-heart"></i>
-                    {{ post.likes || 0 }}
+                    {{ post.like_count || 0 }}
+                    <!-- API 응답 필드명 'like_count' 사용 -->
                   </span>
                   <span class="stat-item">
                     <i class="fas fa-comment"></i>
-                    {{ post.comments_count || 0 }}
+                    {{ post.comments ? post.comments.length : 0 }}
+                    <!-- API 응답의 'comments' 배열 길이 사용 -->
                   </span>
                 </div>
                 <div class="post-date">
@@ -143,17 +152,28 @@
           <div class="widget">
             <h4 class="widget-title">인기 게시글</h4>
             <div class="popular-posts">
-              <div class="popular-post" v-for="i in 3" :key="i">
-                <div class="popular-rank">{{ i }}</div>
+              <RouterLink
+                v-for="(post, index) in popularPosts.slice(0, 5)"
+                :key="post.id"
+                :to="`/community/post/${post.id}`"
+                class="popular-post"
+              >
+                <div class="popular-rank">{{ index + 1 }}</div>
                 <div class="popular-content">
-                  <h5 class="popular-title">투자 초보자를 위한 가이드</h5>
+                  <h5 class="popular-title">{{ post.title }}</h5>
                   <div class="popular-meta">
-                    <span class="popular-author">투자왕</span>
+                    <span class="popular-author">{{
+                      post.author_nickname || post.author
+                    }}</span>
                     <span class="popular-views">
-                      <i class="fas fa-eye"></i> 1,234
+                      <i class="fas fa-heart"></i>
+                      {{ post.likes_display_count }}
                     </span>
                   </div>
                 </div>
+              </RouterLink>
+              <div v-if="!popularPosts.length" class="empty-popular-posts">
+                <p>인기 게시글이 없습니다.</p>
               </div>
             </div>
           </div>
@@ -179,18 +199,6 @@
               </div>
             </div>
           </div>
-
-          <div class="widget trending-widget">
-            <h4 class="widget-title">인기 태그</h4>
-            <div class="trending-tags">
-              <span class="tag">#주식투자</span>
-              <span class="tag">#부동산</span>
-              <span class="tag">#예적금</span>
-              <span class="tag">#펀드</span>
-              <span class="tag">#암호화폐</span>
-              <span class="tag">#재테크</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -203,8 +211,11 @@ import { useRoute } from "vue-router";
 import axios from "axios";
 
 const route = useRoute();
+// onUnmounted는 visibilitychange 리스너 제거용이었으므로, 해당 리스너가 없어지면 onUnmounted도 필요 없음.
+// onActivated 훅은 keep-alive 설정이 어려워 사용하지 않기로 함.
 const category = ref(route.query.category || "free");
 const posts = ref([]);
+const popularPosts = ref([]);
 
 const categories = {
   free: "자유게시판",
@@ -219,14 +230,18 @@ const getCategoryIcon = (cat) => {
     free: "fas fa-comments",
     invest: "fas fa-chart-line",
     bank: "fas fa-university",
-    qna: "fas fa-question-circle"
+    qna: "fas fa-question-circle",
   };
   return icons[cat] || "fas fa-comments";
 };
 
 // 작성자 이니셜 생성
 const getAuthorInitial = (author) => {
-  return author ? author.charAt(0).toUpperCase() : "?";
+  if (typeof author === "string" || author instanceof String) {
+    return author ? author.charAt(0).toUpperCase() : "?";
+  }
+  // In case author is an object or not a string as expected
+  return "?";
 };
 
 // 게시글 미리보기 생성
@@ -237,14 +252,16 @@ const getPostPreview = (content) => {
 
 // 고유 작성자 수 계산
 const getUniqueAuthors = () => {
-  const authors = new Set(posts.value.map(post => post.author));
+  const authors = new Set(
+    posts.value.map((post) => post.author_nickname || post.author)
+  );
   return authors.size;
 };
 
 // 오늘 작성된 게시글 수 계산
 const getTodayPosts = () => {
   const today = new Date().toDateString();
-  return posts.value.filter(post => {
+  return posts.value.filter((post) => {
     const postDate = new Date(post.created_at).toDateString();
     return postDate === today;
   }).length;
@@ -257,39 +274,116 @@ const formatDate = (iso) => {
   const diffTime = Math.abs(now - date);
   const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffHours < 1) {
-    return '방금 전';
+    return "방금 전";
   } else if (diffHours < 24) {
     return `${diffHours}시간 전`;
   } else if (diffDays < 7) {
     return `${diffDays}일 전`;
   } else {
-    return date.toLocaleDateString('ko-KR');
+    return date.toLocaleDateString("ko-KR");
   }
 };
 
 // API 호출
 const fetchPosts = async () => {
+  console.log(`Fetching posts for category: ${category.value}`); // 카테고리 확인 로그
   try {
     const res = await axios.get("/api/community/posts/", {
       params: { category: category.value },
     });
+    console.log("Fetched posts data:", JSON.parse(JSON.stringify(res.data))); // 응답 데이터 로그 (깊은 복사로 프록시 객체 회피)
     posts.value = res.data;
   } catch (err) {
     console.error("게시글 로드 실패", err);
+    posts.value = []; // 오류 발생 시 빈 배열로 초기화
   }
 };
 
-onMounted(fetchPosts);
-watch(category, () => {
+const fetchPopularPosts = async () => {
+  console.log("Fetching popular posts");
+  try {
+    const res = await axios.get("/api/community/posts/", {
+      params: { sort: "popular" },
+    });
+    // API 응답에서 'like_count' 필드를 사용 (num_likes, likes 등은 현재 API 응답에 없음)
+    popularPosts.value = res.data.map((post) => ({
+      ...post,
+      likes_display_count: post.like_count || 0,
+    }));
+  } catch (err) {
+    console.error("인기 게시글 로드 실패", err);
+    popularPosts.value = []; // 오류 발생 시 빈 배열로 초기화
+  }
+};
+
+onMounted(() => {
+  // 초기 데이터 로드
   fetchPosts();
+  fetchPopularPosts();
+});
+
+// CommunityPage로 다시 탐색될 때 (예: 상세 페이지에서 뒤로 가기) 데이터를 새로고침합니다.
+// 라우터 설정에서 이 컴포넌트에 해당하는 라우트의 name이 'CommunityPage'라고 가정합니다.
+// 이 watch는 컴포넌트가 이미 마운트된 상태에서 라우트가 변경되어 다시 이 페이지로 돌아올 때를 위함입니다.
+watch(
+  () => route.name,
+  (newName, oldName) => {
+    console.log(`Route name changed - Old: ${oldName}, New: ${newName}`); // 라우트 변경 로그
+    // CommunityPage로 돌아왔을 때 (newName이 'CommunityPage'이고, oldName이 있었던 경우)
+    // 또는 CommunityPage 내에서 다른 경로에서 CommunityPage로 이동한 경우 (예: 다른 탭에서 이 페이지로 직접 링크)
+    // onMounted는 초기 마운트에만 실행되므로, 페이지 재방문 시 데이터 갱신을 위해 필요합니다.
+    // 라우터에 정의된 이름은 'Community' 입니다.
+    if (
+      newName === "Community" && // 'CommunityPage'에서 'Community'로 수정
+      oldName !== undefined &&
+      oldName !== null
+    ) {
+      // oldName이 null이나 undefined가 아닌 경우에만 (즉, 실제 이전 라우트가 있었던 경우)
+      console.log(
+        `Community page re-entered or specifically navigated to (Old: ${oldName}, New: ${newName}). Fetching data.`
+      );
+      fetchPosts();
+      fetchPopularPosts();
+    } else if (
+      newName === "Community" && // 'CommunityPage'에서 'Community'로 수정
+      (oldName === undefined || oldName === null)
+    ) {
+      // 이 경우는 거의 onMounted와 동일한 시점이거나, 직접 URL로 CommunityPage에 접근한 경우일 수 있음.
+      // onMounted에서 이미 호출하므로, 중복 호출을 피하거나 로직을 통합해야 할 수 있음.
+      // 현재는 onMounted에서 처리하므로 이 블록은 사실상 불필요하거나, 특정 엣지 케이스용.
+      console.log(
+        `CommunityPage initial navigation or direct access (oldName: ${oldName}). Data likely fetched by onMounted.`
+      );
+    }
+  },
+  { immediate: false } // 초기 마운트 시에는 onMounted에서 호출하므로 false
+);
+
+watch(category, () => {
+  // 이 watch는 category ref가 변경될 때만 실행됩니다.
+  console.log(`Category changed to: ${category.value}. Fetching posts.`);
+  fetchPosts();
+  // 카테고리 변경 시 URL 업데이트 (선택적: 브라우저 히스토리 스택 관리)
+  // router.push({ query: { category: category.value } }) // 이렇게 하면 히스토리에 남음
+  // 현재 방식은 히스토리에 남기지 않고 URL만 변경
   window.history.replaceState(
     null,
     "",
     `/community?category=${category.value}`
   );
 });
+
+// 라우트 변경 감지 (CommunityPage로 돌아왔을 때)
+// CommunityDetailPage 등에서 CommunityPage로 돌아올 때,
+// onMounted가 다시 실행되지 않는 경우를 대비 (예: keep-alive 미사용 및 브라우저 캐시)
+// watch(() => route.fullPath, (newPath, oldPath) => {
+//   // Community 페이지로 돌아왔는지, 또는 Community 페이지 내에서 이동했는지 등을 판단하여
+//   // fetchPosts() 및 fetchPopularPosts() 호출 여부 결정
+//   // 예: if (newPath.startsWith('/community') && !oldPath.startsWith('/community/post')) { ... }
+//   // 이 방식은 복잡해질 수 있으므로 visibilitychange를 우선 사용
+// }, { immediate: false }); // immediate: true로 하면 초기 로드 시에도 실행됨
 </script>
 
 <style scoped>
@@ -313,12 +407,12 @@ watch(category, () => {
   font-weight: 800;
   color: white;
   margin-bottom: 20px;
-  text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .hero-subtitle {
   font-size: 1.2rem;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 40px;
   line-height: 1.6;
 }
@@ -330,7 +424,7 @@ watch(category, () => {
 }
 
 .content-wrapper {
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 30px 30px 0 0;
   padding: 40px;
   margin-top: -20px;
@@ -350,7 +444,7 @@ watch(category, () => {
 }
 
 .section-title::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -410,7 +504,7 @@ watch(category, () => {
   background: white;
   border-radius: 15px;
   padding: 25px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   gap: 20px;
@@ -419,7 +513,7 @@ watch(category, () => {
 
 .stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
 }
 
 .stat-icon {
@@ -487,7 +581,7 @@ watch(category, () => {
   background: white;
   border-radius: 15px;
   padding: 25px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   text-decoration: none;
   color: inherit;
   transition: all 0.3s ease;
@@ -496,7 +590,7 @@ watch(category, () => {
 
 .post-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
   border-color: #667eea;
   color: inherit;
 }
@@ -666,7 +760,7 @@ watch(category, () => {
   background: white;
   border-radius: 15px;
   padding: 25px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
 .widget-title {
@@ -686,6 +780,12 @@ watch(category, () => {
   display: flex;
   gap: 15px;
   align-items: flex-start;
+  text-decoration: none; /* Add this to remove underline from RouterLink */
+  color: inherit; /* Add this to inherit text color */
+}
+
+.popular-post:hover .popular-title {
+  color: #667eea; /* Optional: Add hover effect for title */
 }
 
 .popular-rank {
@@ -708,6 +808,7 @@ watch(category, () => {
   color: #333;
   margin-bottom: 5px;
   line-height: 1.3;
+  transition: color 0.3s ease; /* Optional: Smooth transition for hover effect */
 }
 
 .popular-meta {
@@ -722,6 +823,12 @@ watch(category, () => {
   display: flex;
   align-items: center;
   gap: 3px;
+}
+
+.empty-popular-posts p {
+  color: #666;
+  text-align: center;
+  font-style: italic;
 }
 
 .community-rules {
@@ -753,7 +860,7 @@ watch(category, () => {
 }
 
 .tag {
-  background: rgba(255,255,255,0.8);
+  background: rgba(255, 255, 255, 0.8);
   color: #8b4513;
   padding: 6px 12px;
   border-radius: 15px;
@@ -765,30 +872,30 @@ watch(category, () => {
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .content-wrapper {
     grid-template-columns: 1fr;
     padding: 20px;
   }
-  
+
   .category-tabs {
     justify-content: center;
   }
-  
+
   .stats-section {
     grid-template-columns: 1fr;
   }
-  
+
   .section-header {
     flex-direction: column;
     gap: 20px;
     align-items: stretch;
   }
-  
+
   .posts-section {
     grid-column: 1;
   }
-  
+
   .sidebar {
     grid-column: 1;
   }

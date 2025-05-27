@@ -18,16 +18,21 @@
           <p class="hero-subtitle" v-else>
             {{ username }}님의 공개 프로필입니다
           </p>
-          
+
           <!-- 설문조사 완료 상태 -->
-          <div v-if="isOwnProfile && profile.survey_completed" class="survey-status completed">
+          <div
+            v-if="isOwnProfile && profile.survey_completed"
+            class="survey-status completed"
+          >
             <i class="fas fa-check-circle"></i>
             <span>투자 성향 설문조사 완료</span>
           </div>
           <div v-else-if="isOwnProfile" class="survey-status incomplete">
             <i class="fas fa-exclamation-circle"></i>
             <span>설문조사를 완료해주세요</span>
-            <router-link to="/survey" class="survey-link">설문조사 하기</router-link>
+            <router-link to="/survey" class="survey-link"
+              >설문조사 하기</router-link
+            >
           </div>
         </div>
       </div>
@@ -52,7 +57,10 @@
                   아이디
                 </div>
                 <div class="info-value">
-                  <RouterLink :to="`/profile/${username}`" class="username-link">
+                  <RouterLink
+                    :to="`/profile/${username}`"
+                    class="username-link"
+                  >
                     {{ username }}
                   </RouterLink>
                 </div>
@@ -75,11 +83,32 @@
                   {{ profile.phone }}
                 </div>
               </div>
+              <div class="info-item" v-if="profile.home_address">
+                <div class="info-label" style="white-space: nowrap">
+                  <i class="fas fa-home"></i>
+                  집 주소
+                </div>
+                <div class="info-value">
+                  {{ profile.home_address || "미입력" }}
+                </div>
+              </div>
+              <div class="info-item" v-if="profile.company_address">
+                <div class="info-label" style="white-space: nowrap">
+                  <i class="fas fa-building"></i>
+                  회사 주소
+                </div>
+                <div class="info-value">
+                  {{ profile.company_address || "미입력" }}
+                </div>
+              </div>
             </div>
           </div>
 
           <!-- 투자 성향 카드 (설문조사 완료 시) -->
-          <div class="info-card investment-info" v-if="isOwnProfile && profile.survey_completed">
+          <div
+            class="info-card investment-info"
+            v-if="isOwnProfile && profile.survey_completed"
+          >
             <div class="card-header">
               <div class="card-icon">
                 <i class="fas fa-chart-pie"></i>
@@ -116,13 +145,20 @@
               </div>
               <div class="info-item">
                 <div class="info-label">
-                  <i class="fas fa-target"></i>
+                  <i class="fas fa-bullseye"></i>
+                  <!-- 투자 목적 아이콘 변경/추가 -->
                   투자 목적
                 </div>
                 <div class="info-value">
                   {{ getInvestmentGoalLabel(profile.investment_goal) }}
                 </div>
               </div>
+              <button
+                @click="goToSurvey"
+                class="btn btn-outline-primary mt-3 w-100"
+              >
+                <i class="fas fa-redo-alt me-2"></i>설문조사 다시하기
+              </button>
             </div>
           </div>
 
@@ -158,59 +194,241 @@
         </div>
 
         <!-- 보유 주식 섹션 -->
-        <div class="section" v-if="isOwnProfile && profile.owned_stocks && profile.owned_stocks.length > 0">
+        <div class="section" v-if="isOwnProfile">
           <h3 class="section-title">
             <i class="fas fa-chart-line"></i>
             보유 주식
+            <button
+              @click="toggleOwnedStockSearch"
+              class="btn btn-sm btn-outline-primary ms-2"
+            >
+              <i
+                :class="showOwnedStockSearch ? 'fas fa-times' : 'fas fa-plus'"
+              ></i>
+            </button>
           </h3>
-          <div class="stock-grid">
-            <div v-for="stock in profile.owned_stocks" :key="stock.code" class="stock-card">
+          <div v-if="showOwnedStockSearch" class="stock-search-section mb-3">
+            <input
+              type="text"
+              v-model="ownedStockSearchQuery"
+              @input="debouncedSearchOwnedStocks"
+              placeholder="주식명 또는 코드 검색"
+              class="form-control mb-2"
+            />
+            <div
+              v-if="ownedStockSearchResults.length > 0"
+              class="search-results list-group"
+            >
+              <button
+                type="button"
+                class="list-group-item list-group-item-action"
+                v-for="stock in ownedStockSearchResults"
+                :key="stock.stock_code"
+                @click="addStock('owned', stock)"
+              >
+                {{ stock.stock_name }} ({{ stock.stock_code }})
+              </button>
+            </div>
+          </div>
+          <div
+            v-if="profile.owned_stocks && profile.owned_stocks.length > 0"
+            class="stock-grid"
+          >
+            <div
+              v-for="stock in profile.owned_stocks"
+              :key="stock.code"
+              class="stock-card"
+            >
               <div class="stock-info">
                 <div class="stock-name">{{ stock.name }}</div>
                 <div class="stock-code">{{ stock.code }}</div>
               </div>
               <div class="stock-actions">
-                <button @click="removeStock('owned', stock.code)" class="btn-remove">
+                <button
+                  @click="removeStock('owned', stock.code)"
+                  class="btn-remove"
+                >
                   <i class="fas fa-times"></i>
                 </button>
               </div>
             </div>
           </div>
+          <p v-else-if="!showOwnedStockSearch" class="text-muted">
+            보유 주식이 없습니다.
+          </p>
         </div>
 
         <!-- 관심 주식 섹션 -->
-        <div class="section" v-if="isOwnProfile && profile.interested_stocks && profile.interested_stocks.length > 0">
+        <div class="section" v-if="isOwnProfile">
           <h3 class="section-title">
             <i class="fas fa-heart"></i>
             관심 주식
+            <button
+              @click="toggleInterestedStockSearch"
+              class="btn btn-sm btn-outline-primary ms-2"
+            >
+              <i
+                :class="
+                  showInterestedStockSearch ? 'fas fa-times' : 'fas fa-plus'
+                "
+              ></i>
+            </button>
           </h3>
-          <div class="stock-grid">
-            <div v-for="stock in profile.interested_stocks" :key="stock.code" class="stock-card">
+          <div
+            v-if="showInterestedStockSearch"
+            class="stock-search-section mb-3"
+          >
+            <input
+              type="text"
+              v-model="interestedStockSearchQuery"
+              @input="debouncedSearchInterestedStocks"
+              placeholder="주식명 또는 코드 검색"
+              class="form-control mb-2"
+            />
+            <div
+              v-if="interestedStockSearchResults.length > 0"
+              class="search-results list-group"
+            >
+              <button
+                type="button"
+                class="list-group-item list-group-item-action"
+                v-for="stock in interestedStockSearchResults"
+                :key="stock.stock_code"
+                @click="addStock('interested', stock)"
+              >
+                {{ stock.stock_name }} ({{ stock.stock_code }})
+              </button>
+            </div>
+          </div>
+          <div
+            v-if="
+              profile.interested_stocks && profile.interested_stocks.length > 0
+            "
+            class="stock-grid"
+          >
+            <div
+              v-for="(stockName, index) in profile.interested_stocks"
+              :key="`interested-${stockName}-${index}`"
+              class="stock-card"
+            >
               <div class="stock-info">
-                <div class="stock-name">{{ stock.name }}</div>
-                <div class="stock-code">{{ stock.code }}</div>
+                <div class="stock-name">{{ stockName }}</div>
+                <!-- <div class="stock-code">관심 주식은 이름만 표시</div> -->
               </div>
               <div class="stock-actions">
-                <button @click="removeStock('interested', stock.code)" class="btn-remove">
+                <button
+                  @click="removeStock('interested', stockName)"
+                  class="btn-remove"
+                >
                   <i class="fas fa-times"></i>
                 </button>
               </div>
             </div>
           </div>
+          <p v-else-if="!showInterestedStockSearch" class="text-muted">
+            관심 주식이 없습니다.
+          </p>
+        </div>
+
+        <!-- 스크랩한 글 섹션 -->
+        <div class="section" v-if="isOwnProfile">
+          <h3 class="section-title">
+            <i class="fas fa-bookmark"></i>
+            스크랩한 글
+          </h3>
+          <div v-if="scrappedPosts.length > 0" class="post-list">
+            <div
+              v-for="post in showAllScrapped
+                ? scrappedPosts
+                : scrappedPosts.slice(0, 5)"
+              :key="post.id"
+              class="post-item"
+              @click="goToPostDetail(post.id)"
+            >
+              <div class="post-item-header">
+                <span class="post-item-category"
+                  >[{{ post.category_display }}]</span
+                >
+                <h4 class="post-item-title ms-2">{{ post.title }}</h4>
+                <span class="post-item-author ms-auto"
+                  >작성자: {{ post.author }}</span
+                >
+              </div>
+            </div>
+          </div>
+          <button
+            v-if="scrappedPosts.length > 5"
+            @click="toggleShowAllScrapped"
+            class="btn btn-outline-secondary mt-3"
+          >
+            {{ showAllScrapped ? "간략히 보기" : "더보기" }}
+          </button>
+          <p v-if="scrappedPosts.length === 0" class="text-muted">
+            스크랩한 글이 없습니다.
+          </p>
+        </div>
+
+        <!-- 내가 작성한 글 섹션 -->
+        <div class="section">
+          <h3 class="section-title">
+            <i class="fas fa-pen-alt"></i>
+            {{ isOwnProfile ? "내가" : username + "님이" }} 작성한 글
+          </h3>
+          <div v-if="userPosts.length > 0" class="post-list">
+            <div
+              v-for="post in showAllUserPosts
+                ? userPosts
+                : userPosts.slice(0, 5)"
+              :key="post.id"
+              class="post-item"
+              @click="goToPostDetail(post.id)"
+            >
+              <div class="post-item-header">
+                <span class="post-item-category"
+                  >[{{ post.category_display }}]</span
+                >
+                <h4 class="post-item-title ms-2">{{ post.title }}</h4>
+              </div>
+            </div>
+          </div>
+          <button
+            v-if="userPosts.length > 5"
+            @click="toggleShowAllUserPosts"
+            class="btn btn-outline-secondary mt-3"
+          >
+            {{ showAllUserPosts ? "간략히 보기" : "더보기" }}
+          </button>
+          <p v-if="userPosts.length === 0" class="text-muted">
+            작성한 글이 없습니다.
+          </p>
         </div>
 
         <!-- 유튜브 나중에 볼 영상 섹션 -->
-        <div class="section" v-if="isOwnProfile && profile.watch_later_videos && profile.watch_later_videos.length > 0">
+        <div
+          class="section"
+          v-if="
+            isOwnProfile &&
+            profile.watch_later_videos &&
+            profile.watch_later_videos.length > 0
+          "
+        >
           <h3 class="section-title">
             <i class="fas fa-clock"></i>
             나중에 볼 영상
           </h3>
           <div class="video-grid">
-            <div v-for="video in profile.watch_later_videos" :key="video.video_id" class="video-card" @click="openVideo(video)">
+            <div
+              v-for="video in profile.watch_later_videos"
+              :key="video.video_id"
+              class="video-card"
+              @click="openVideo(video)"
+            >
               <div class="video-thumbnail">
-                <img 
-                  :src="video.thumbnail_url || getYoutubeThumbnail(video.video_id)" 
-                  :alt="video.title" 
+                <img
+                  :src="
+                    video.thumbnail_url || getYoutubeThumbnail(video.video_id)
+                  "
+                  :alt="video.title"
                   @error="handleVideoImageError"
                 />
                 <div class="video-duration">{{ video.duration }}</div>
@@ -219,12 +437,19 @@
                 <h4 class="video-title">{{ video.title }}</h4>
                 <p class="video-channel">{{ video.channel_title }}</p>
                 <div class="video-meta">
-                  <span class="video-views">조회수 {{ formatViews(video.view_count) }}</span>
-                  <span class="video-date">{{ formatDate(video.published_at) }}</span>
+                  <span class="video-views"
+                    >조회수 {{ formatViews(video.view_count) }}</span
+                  >
+                  <span class="video-date">{{
+                    formatDate(video.published_at)
+                  }}</span>
                 </div>
               </div>
               <div class="video-actions">
-                <button @click.stop="removeWatchLater(video.video_id)" class="btn-remove">
+                <button
+                  @click.stop="removeWatchLater(video.video_id)"
+                  class="btn-remove"
+                >
                   <i class="fas fa-times"></i>
                 </button>
               </div>
@@ -233,29 +458,48 @@
         </div>
 
         <!-- 구독 채널 섹션 -->
-        <div class="section" v-if="isOwnProfile && profile.subscribed_channels && profile.subscribed_channels.length > 0">
+        <div
+          class="section"
+          v-if="
+            isOwnProfile &&
+            profile.subscribed_channels &&
+            profile.subscribed_channels.length > 0
+          "
+        >
           <h3 class="section-title">
             <i class="fas fa-heart"></i>
             구독 채널
           </h3>
           <div class="channel-grid">
-            <div v-for="channel in profile.subscribed_channels" :key="channel.channel_id" class="channel-card" @click="openChannel(channel)">
+            <div
+              v-for="channel in profile.subscribed_channels"
+              :key="channel.channel_id"
+              class="channel-card"
+              @click="openChannel(channel)"
+            >
               <div class="channel-thumbnail">
-                <img 
-                  :src="channel.thumbnail_url || getDefaultChannelImage()" 
-                  :alt="channel.title" 
+                <img
+                  :src="channel.thumbnail_url || getDefaultChannelImage()"
+                  :alt="channel.title"
                   @error="handleChannelImageError"
                 />
               </div>
               <div class="channel-content">
                 <h4 class="channel-title">{{ channel.title }}</h4>
-                <p class="channel-description">{{ truncateText(channel.description, 80) }}</p>
+                <p class="channel-description">
+                  {{ truncateText(channel.description, 80) }}
+                </p>
                 <div class="channel-meta">
-                  <span class="channel-subscribers">구독자 {{ formatViews(channel.subscriber_count) }}</span>
+                  <span class="channel-subscribers"
+                    >구독자 {{ formatViews(channel.subscriber_count) }}</span
+                  >
                 </div>
               </div>
               <div class="channel-actions">
-                <button @click.stop="removeSubscription(channel.channel_id)" class="btn-remove">
+                <button
+                  @click.stop="removeSubscription(channel.channel_id)"
+                  class="btn-remove"
+                >
                   <i class="fas fa-times"></i>
                 </button>
               </div>
@@ -270,18 +514,31 @@
             관련 뉴스
           </h3>
           <div class="news-grid">
-            <div v-for="news in relatedNews" :key="news.id" class="news-card" @click="openNews(news)">
+            <div
+              v-for="news in relatedNews"
+              :key="news.id"
+              class="news-card"
+              @click="openNews(news)"
+            >
               <div class="news-image">
-                <img v-if="news.image_url" :src="news.image_url" :alt="news.title" />
+                <img
+                  v-if="news.image_url"
+                  :src="news.image_url"
+                  :alt="news.title"
+                />
                 <div v-else class="news-placeholder">
                   <i class="fas fa-newspaper"></i>
                 </div>
               </div>
               <div class="news-content">
                 <h4 class="news-title">{{ news.title }}</h4>
-                <p class="news-summary">{{ truncateText(news.summary || news.content, 100) }}</p>
+                <p class="news-summary">
+                  {{ truncateText(news.summary || news.content, 100) }}
+                </p>
                 <div class="news-meta">
-                  <span class="news-date">{{ formatDate(news.published_date) }}</span>
+                  <span class="news-date">{{
+                    formatDate(news.published_date)
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -296,14 +553,24 @@
           </h3>
           <div class="activity-list">
             <div v-if="activities.length > 0">
-              <div v-for="activity in activities" :key="activity.id" class="activity-item">
+              <div
+                v-for="activity in activities"
+                :key="activity.id"
+                class="activity-item"
+              >
                 <div class="activity-icon">
                   <i :class="getActivityIcon(activity.activity_type)"></i>
                 </div>
                 <div class="activity-content">
-                  <div class="activity-title">{{ getActivityTitle(activity.activity_type) }}</div>
-                  <div class="activity-description">{{ activity.description }}</div>
-                  <div class="activity-time">{{ formatDate(activity.created_at) }}</div>
+                  <div class="activity-title">
+                    {{ getActivityTitle(activity.activity_type) }}
+                  </div>
+                  <div class="activity-description">
+                    {{ activity.description }}
+                  </div>
+                  <div class="activity-time">
+                    {{ formatDate(activity.created_at) }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -339,6 +606,8 @@ const username = route.params.username || userStore.username;
 const profile = ref({
   email: "",
   phone: "",
+  home_address: "",
+  company_address: "",
   stock_experience: "",
   investment_style: "",
   monthly_investment_amount: "",
@@ -348,8 +617,21 @@ const profile = ref({
   survey_completed: false,
 });
 
+// 주식 검색 관련
+const showOwnedStockSearch = ref(false);
+const ownedStockSearchQuery = ref("");
+const ownedStockSearchResults = ref([]);
+const showInterestedStockSearch = ref(false);
+const interestedStockSearchQuery = ref("");
+const interestedStockSearchResults = ref([]);
+
 const activities = ref([]);
 const relatedNews = ref([]);
+const scrappedPosts = ref([]);
+const userPosts = ref([]);
+const showAllScrapped = ref(false);
+const showAllUserPosts = ref(false);
+
 const loaded = ref(false);
 
 const isOwnProfile = computed(
@@ -359,7 +641,6 @@ const isOwnProfile = computed(
 const displayName = computed(() => (isOwnProfile.value ? "내" : `${username}`));
 
 onMounted(async () => {
-  // 본인 프로필 접근 시 인증 확인
   if (isOwnProfile.value) {
     const isAuthenticated = await userStore.checkAuthAndRedirect(router);
     if (!isAuthenticated) {
@@ -377,11 +658,15 @@ onMounted(async () => {
     if (isOwnProfile.value) {
       await Promise.all([
         loadActivities(),
-        loadRelatedNews()
+        loadRelatedNews(),
+        loadScrappedPosts(true),
+        loadUserPosts(true),
       ]);
+    } else {
+      await loadUserPosts(true);
     }
   } catch (err) {
-    console.error("프로필 조회 실패", err);
+    console.error("프로필 조회 실패:", err);
     if (err.response?.status === 403 || err.response?.status === 401) {
       alert("로그인이 필요합니다.");
       router.push("/login");
@@ -396,49 +681,237 @@ onMounted(async () => {
 
 const loadActivities = async () => {
   try {
-    const response = await axios.get('/api/accounts/activities/');
-    activities.value = response.data;
+    const response = await axios.get("/api/accounts/activities/");
+    activities.value = response.data.slice(0, 5);
   } catch (error) {
-    console.error('활동 내역 로드 실패:', error);
+    console.error("활동 내역 로드 실패:", error);
+  }
+};
+
+const goToPostDetail = (postId) => {
+  router.push(`/community/post/${postId}`); // 경로 수정
+};
+
+const loadScrappedPosts = async (isInitial = false) => {
+  if (!isOwnProfile.value) return;
+  try {
+    const limit = isInitial && !showAllScrapped.value ? 5 : null;
+    const url = limit
+      ? `/api/accounts/scrapped-posts/?limit=${limit}`
+      : "/api/accounts/scrapped-posts/";
+    const response = await axios.get(url);
+    scrappedPosts.value = response.data;
+  } catch (error) {
+    console.error("스크랩한 글 로드 실패:", error);
+    scrappedPosts.value = [];
+  }
+};
+
+const loadUserPosts = async (isInitial = false) => {
+  try {
+    const limit = isInitial && !showAllUserPosts.value ? 5 : null;
+    const url = limit
+      ? `/api/community/posts/?author_username=${username}&limit=${limit}` // author -> author_username 변경
+      : `/api/community/posts/?author_username=${username}`; // author -> author_username 변경
+    const response = await axios.get(url);
+    userPosts.value = response.data.results || response.data || [];
+  } catch (error) {
+    console.error("작성한 글 로드 실패:", error);
+    userPosts.value = [];
+  }
+};
+
+const toggleShowAllScrapped = () => {
+  showAllScrapped.value = !showAllScrapped.value;
+  loadScrappedPosts();
+};
+
+const toggleShowAllUserPosts = () => {
+  showAllUserPosts.value = !showAllUserPosts.value;
+  loadUserPosts();
+};
+
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func.apply(null, args);
+    }, delay);
+  };
+};
+
+const searchStocksAPI = async (query, resultsRef) => {
+  if (query.trim() === "") {
+    resultsRef.value = [];
+    return;
+  }
+  try {
+    const response = await axios.get(`/api/main/stocks/search/?query=${query}`);
+    resultsRef.value = response.data;
+  } catch (error) {
+    console.error("Error searching stocks:", error);
+    resultsRef.value = [];
+  }
+};
+
+const debouncedSearchOwnedStocks = debounce(
+  () => searchStocksAPI(ownedStockSearchQuery.value, ownedStockSearchResults),
+  300
+);
+const debouncedSearchInterestedStocks = debounce(
+  () =>
+    searchStocksAPI(
+      interestedStockSearchQuery.value,
+      interestedStockSearchResults
+    ),
+  300
+);
+
+const toggleOwnedStockSearch = () => {
+  showOwnedStockSearch.value = !showOwnedStockSearch.value;
+  if (!showOwnedStockSearch.value) {
+    ownedStockSearchQuery.value = "";
+    ownedStockSearchResults.value = [];
+  }
+};
+
+const toggleInterestedStockSearch = () => {
+  showInterestedStockSearch.value = !showInterestedStockSearch.value;
+  if (!showInterestedStockSearch.value) {
+    interestedStockSearchQuery.value = "";
+    interestedStockSearchResults.value = [];
+  }
+};
+
+const addStock = async (type, stockFromSearch) => {
+  // stockFromSearch는 { stock_code: '...', stock_name: '...' } 형태
+  try {
+    if (type === "interested") {
+      const stockName = stockFromSearch.stock_name;
+      if (
+        profile.value.interested_stocks &&
+        profile.value.interested_stocks.includes(stockName)
+      ) {
+        alert("이미 관심 목록에 있는 주식입니다.");
+        return;
+      }
+      // 백엔드 UserStocksView의 POST는 stock_name을 직접 받음
+      await axios.post("/api/accounts/stocks/", { stock_name: stockName });
+      // userStore를 통해 상태를 업데이트하거나, 프로필을 다시 fetch 할 수 있음
+      // 여기서는 직접 profile.value.interested_stocks를 업데이트 (userStore 연동 시 변경 필요)
+      if (!profile.value.interested_stocks) {
+        profile.value.interested_stocks = [];
+      }
+      profile.value.interested_stocks.push(stockName);
+      toggleInterestedStockSearch();
+    } else if (type === "owned") {
+      const stockData = {
+        code: stockFromSearch.stock_code,
+        name: stockFromSearch.stock_name,
+      };
+      if (
+        profile.value.owned_stocks &&
+        profile.value.owned_stocks.find((s) => s.code === stockData.code)
+      ) {
+        alert("이미 보유 목록에 있는 주식입니다.");
+        return;
+      }
+      // 보유 주식 추가 API가 별도로 있다면 호출, 여기서는 UserStocksView가 type으로 구분한다고 가정
+      // 하지만 UserStocksView는 현재 관심 주식만 처리하도록 변경했으므로, 보유 주식 로직은 분리 또는 수정 필요
+      // 백엔드 UserStocksView의 POST는 type: "owned" 와 함께 stock_data 객체를 기대함
+      await axios.post("/api/accounts/stocks/", {
+        type: "owned",
+        stock_data: stockData,
+      });
+      if (!profile.value.owned_stocks) {
+        profile.value.owned_stocks = [];
+      }
+      profile.value.owned_stocks.push(stockData);
+      toggleOwnedStockSearch();
+    }
+  } catch (error) {
+    console.error("주식 추가 실패:", error);
+    alert("주식 추가 중 오류가 발생했습니다.");
   }
 };
 
 const loadRelatedNews = async () => {
   try {
-    const allStocks = [...(profile.value.owned_stocks || []), ...(profile.value.interested_stocks || [])];
-    if (allStocks.length > 0) {
-      const response = await axios.get('/api/news/');
+    const ownedStocksForNews = (profile.value.owned_stocks || []).filter(
+      (stock) => stock && stock.name && typeof stock.name === "string"
+    ); // Ensure stock.name is a non-null string
+
+    const interestedStocksForNews = (profile.value.interested_stocks || [])
+      .filter((stockName) => stockName && typeof stockName === "string") // Ensure stockName is a non-null string
+      .map((stockName) => ({ name: stockName }));
+
+    const allStockObjects = [...ownedStocksForNews, ...interestedStocksForNews];
+
+    if (allStockObjects.length > 0) {
+      const response = await axios.get("/api/news/");
       const allNews = response.data || [];
-      
-      relatedNews.value = allNews.filter(news => {
-        return allStocks.some(stock => 
-          news.title.includes(stock.name) || 
-          (news.content && news.content.includes(stock.name))
-        );
-      }).slice(0, 6);
+
+      relatedNews.value = allNews
+        .filter((news) => {
+          if (!news || typeof news.title !== "string") return false;
+          return allStockObjects.some((stock) => {
+            // stock.name is already validated to be a non-null string by prior filters/maps
+            const stockName = stock.name; // stock is guaranteed to have a 'name' property here
+            return (
+              news.title.includes(stockName) ||
+              (news.content &&
+                typeof news.content === "string" &&
+                news.content.includes(stockName))
+            );
+          });
+        })
+        .slice(0, 6);
+    } else {
+      relatedNews.value = []; // No stocks to relate news to, so clear related news
     }
   } catch (error) {
-    console.error('관련 뉴스 로드 실패:', error);
+    console.error("관련 뉴스 로드 실패:", error);
+    relatedNews.value = []; // Ensure relatedNews is cleared on error
   }
 };
 
-const removeStock = async (type, stockCode) => {
+const removeStock = async (type, identifier) => {
+  // identifier는 stockCode 또는 stockName
   try {
-    await axios.delete('/api/accounts/stocks/', {
-      data: {
-        type: type,
-        stock_code: stockCode
+    if (type === "interested") {
+      const stockName = identifier;
+      // 백엔드 UserStocksView의 DELETE는 stock_name을 직접 받음
+      await axios.delete("/api/accounts/stocks/", {
+        data: { stock_name: stockName },
+      });
+      // userStore를 통해 상태를 업데이트하거나, 프로필을 다시 fetch 할 수 있음
+      // 여기서는 직접 profile.value.interested_stocks를 업데이트
+      if (profile.value.interested_stocks) {
+        profile.value.interested_stocks =
+          profile.value.interested_stocks.filter(
+            (sName) => sName !== stockName
+          );
       }
-    });
-    
-    if (type === 'owned') {
-      profile.value.owned_stocks = profile.value.owned_stocks.filter(stock => stock.code !== stockCode);
-    } else {
-      profile.value.interested_stocks = profile.value.interested_stocks.filter(stock => stock.code !== stockCode);
+    } else if (type === "owned") {
+      const stockCode = identifier;
+      // 보유 주식 제거 API가 별도로 있다면 호출, 여기서는 UserStocksView가 type으로 구분한다고 가정
+      // 하지만 UserStocksView는 현재 관심 주식만 처리하도록 변경했으므로, 보유 주식 로직은 분리 또는 수정 필요
+      await axios.delete("/api/accounts/stocks/", {
+        data: {
+          type: "owned", // 이 부분은 백엔드 UserStocksView가 owned도 처리할 경우 유효
+          stock_code: stockCode,
+        },
+      });
+      if (profile.value.owned_stocks) {
+        profile.value.owned_stocks = profile.value.owned_stocks.filter(
+          (stock) => stock.code !== stockCode
+        );
+      }
     }
   } catch (error) {
-    console.error('주식 제거 실패:', error);
-    alert('주식 제거 중 오류가 발생했습니다.');
+    console.error("주식 제거 실패:", error);
+    alert("주식 제거 중 오류가 발생했습니다.");
   }
 };
 
@@ -452,6 +925,10 @@ const goEdit = () => {
 
 const goToCommunity = () => {
   router.push("/community");
+};
+
+const goToSurvey = () => {
+  router.push({ path: "/survey", query: { retake: "true" } });
 };
 
 const goToVideos = () => {
@@ -468,42 +945,47 @@ const openChannel = (channel) => {
 
 const removeWatchLater = async (videoId) => {
   try {
-    await axios.delete('/api/accounts/youtube/', {
+    await axios.delete("/api/accounts/youtube/", {
       data: {
-        type: 'video',
-        content_id: videoId
-      }
+        type: "video",
+        content_id: videoId,
+      },
     });
-    
-    profile.value.watch_later_videos = profile.value.watch_later_videos.filter(video => video.video_id !== videoId);
+
+    profile.value.watch_later_videos = profile.value.watch_later_videos.filter(
+      (video) => video.video_id !== videoId
+    );
   } catch (error) {
-    console.error('나중에 볼 영상 제거 실패:', error);
-    alert('영상 제거 중 오류가 발생했습니다.');
+    console.error("나중에 볼 영상 제거 실패:", error);
+    alert("영상 제거 중 오류가 발생했습니다.");
   }
 };
 
 const removeSubscription = async (channelId) => {
   try {
-    await axios.delete('/api/accounts/youtube/', {
+    await axios.delete("/api/accounts/youtube/", {
       data: {
-        type: 'channel',
-        content_id: channelId
-      }
+        type: "channel",
+        content_id: channelId,
+      },
     });
-    
-    profile.value.subscribed_channels = profile.value.subscribed_channels.filter(channel => channel.channel_id !== channelId);
+
+    profile.value.subscribed_channels =
+      profile.value.subscribed_channels.filter(
+        (channel) => channel.channel_id !== channelId
+      );
   } catch (error) {
-    console.error('구독 채널 제거 실패:', error);
-    alert('채널 제거 중 오류가 발생했습니다.');
+    console.error("구독 채널 제거 실패:", error);
+    alert("채널 제거 중 오류가 발생했습니다.");
   }
 };
 
 const formatViews = (count) => {
-  if (!count) return '0';
+  if (!count) return "0";
   if (count >= 10000) {
-    return Math.floor(count / 10000) + '만';
+    return Math.floor(count / 10000) + "만";
   } else if (count >= 1000) {
-    return Math.floor(count / 1000) + '천';
+    return Math.floor(count / 1000) + "천";
   }
   return count.toString();
 };
@@ -511,94 +993,93 @@ const formatViews = (count) => {
 const formatDate = (dateString) => {
   if (!dateString) return "미입력";
   const date = new Date(dateString);
-  return date.toLocaleDateString('ko-KR');
+  return date.toLocaleDateString("ko-KR");
 };
 
 const truncateText = (text, maxLength) => {
-  if (!text) return '';
+  if (!text) return "";
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  return text.substring(0, maxLength) + "...";
 };
 
 const getInvestmentExperienceLabel = (value) => {
   const labels = {
-    'none': '투자 경험 없음',
-    'beginner': '초보 (1년 미만)',
-    'intermediate': '중급 (1-3년)',
-    'advanced': '고급 (3년 이상)'
+    none: "투자 경험 없음",
+    beginner: "초보 (1년 미만)",
+    intermediate: "중급 (1-3년)",
+    advanced: "고급 (3년 이상)",
   };
-  return labels[value] || '미설정';
+  return labels[value] || "미설정";
 };
 
 const getInvestmentStyleLabel = (value) => {
   const labels = {
-    'conservative': '안전형',
-    'moderate': '중립형',
-    'aggressive': '공격형'
+    conservative: "안전형",
+    moderate: "중립형",
+    aggressive: "공격형",
   };
-  return labels[value] || '미설정';
+  return labels[value] || "미설정";
 };
 
 const getMonthlyAmountLabel = (value) => {
   const labels = {
-    'under_50': '50만원 미만',
-    '50_100': '50-100만원',
-    '100_300': '100-300만원',
-    'over_300': '300만원 이상'
+    under_50: "50만원 미만",
+    "50_100": "50-100만원",
+    "100_300": "100-300만원",
+    over_300: "300만원 이상",
   };
-  return labels[value] || '미설정';
+  return labels[value] || "미설정";
 };
 
 const getInvestmentGoalLabel = (value) => {
   const labels = {
-    'short_term': '단기 수익',
-    'long_term': '장기 투자',
-    'retirement': '은퇴 준비',
-    'emergency_fund': '비상 자금'
+    short_term: "단기 수익",
+    long_term: "장기 투자",
+    retirement: "은퇴 준비",
+    emergency_fund: "비상 자금",
   };
-  return labels[value] || '미설정';
+  return labels[value] || "미설정";
 };
 
 const getActivityIcon = (activityType) => {
   const icons = {
-    'login': 'fas fa-sign-in-alt',
-    'news_view': 'fas fa-newspaper',
-    'video_watch': 'fas fa-play',
-    'stock_search': 'fas fa-chart-line',
-    'saving_search': 'fas fa-piggy-bank',
-    'community_post': 'fas fa-edit',
-    'community_comment': 'fas fa-comment',
-    'survey_completed': 'fas fa-check-circle'
+    login: "fas fa-sign-in-alt",
+    news_view: "fas fa-newspaper",
+    video_watch: "fas fa-play",
+    stock_search: "fas fa-chart-line",
+    saving_search: "fas fa-piggy-bank",
+    community_post: "fas fa-edit",
+    community_comment: "fas fa-comment",
+    survey_completed: "fas fa-check-circle",
   };
-  return icons[activityType] || 'fas fa-circle';
+  return icons[activityType] || "fas fa-circle";
 };
 
 const getActivityTitle = (activityType) => {
   const titles = {
-    'login': '로그인',
-    'news_view': '뉴스 조회',
-    'video_watch': '영상 시청',
-    'stock_search': '주식 검색',
-    'saving_search': '예적금 검색',
-    'community_post': '커뮤니티 글 작성',
-    'community_comment': '댓글 작성',
-    'survey_completed': '설문조사 완료'
+    login: "로그인",
+    news_view: "뉴스 조회",
+    video_watch: "영상 시청",
+    stock_search: "주식 검색",
+    saving_search: "예적금 검색",
+    community_post: "커뮤니티 글 작성",
+    community_comment: "댓글 작성",
+    survey_completed: "설문조사 완료",
   };
-  return titles[activityType] || '활동';
+  return titles[activityType] || "활동";
 };
 
-// 유튜브 이미지 처리 함수들
 const getYoutubeThumbnail = (videoId) => {
   if (!videoId) return getDefaultVideoImage();
   return `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 };
 
 const getDefaultVideoImage = () => {
-  return 'https://i.ytimg.com/vi/default.jpg';
+  return "https://i.ytimg.com/vi/default.jpg";
 };
 
 const getDefaultChannelImage = () => {
-  return 'https://yt3.ggpht.com/a/default-user=s88-c-k-c0x00ffffff-no-rj';
+  return "https://yt3.ggpht.com/a/default-user=s88-c-k-c0x00ffffff-no-rj";
 };
 
 const handleVideoImageError = (event) => {
@@ -635,8 +1116,8 @@ const handleChannelImageError = (event) => {
 .avatar-circle {
   width: 120px;
   height: 120px;
-  background: rgba(255,255,255,0.2);
-  border: 4px solid rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.2);
+  border: 4px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -644,7 +1125,7 @@ const handleChannelImageError = (event) => {
   font-size: 3rem;
   color: white;
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .avatar-status {
@@ -669,12 +1150,12 @@ const handleChannelImageError = (event) => {
   font-weight: 800;
   color: white;
   margin-bottom: 15px;
-  text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .hero-subtitle {
   font-size: 1.1rem;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 20px;
   line-height: 1.6;
 }
@@ -723,7 +1204,7 @@ const handleChannelImageError = (event) => {
 }
 
 .content-wrapper {
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 30px 30px 0 0;
   padding: 40px;
   margin-top: -20px;
@@ -741,14 +1222,14 @@ const handleChannelImageError = (event) => {
   background: white;
   border-radius: 20px;
   padding: 30px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }
 
 .info-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -770,7 +1251,7 @@ const handleChannelImageError = (event) => {
 
 .info-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
 }
 
 .card-header {
@@ -901,7 +1382,7 @@ const handleChannelImageError = (event) => {
 
 .action-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 .section {
@@ -933,13 +1414,13 @@ const handleChannelImageError = (event) => {
   padding: 15px;
   background: white;
   border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
 .stock-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
 
 .stock-info {
@@ -976,6 +1457,82 @@ const handleChannelImageError = (event) => {
   transform: scale(1.1);
 }
 
+.post-list {
+  display: grid;
+  gap: 15px;
+}
+
+.post-item {
+  background: white;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.post-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.post-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.post-item-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.post-item-category {
+  font-size: 0.9rem; /* 크기 약간 키움 */
+  color: #667eea;
+  font-weight: 600;
+  /* margin-bottom 제거 또는 조정 */
+}
+
+/* .post-item-content 와 .post-item-date 는 현재 템플릿에서 사용 안함 */
+/* 필요시 주석 해제 또는 스타일 유지 */
+/*
+.post-item-content {
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.post-item-date {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+*/
+
+.post-item-header {
+  display: flex;
+  align-items: center; /* 수직 중앙 정렬 */
+  justify-content: space-between; /* 양쪽 끝으로 요소를 분산 */
+  width: 100%;
+}
+
+.post-item-header .post-item-title {
+  margin-bottom: 0; /* 제목 아래 여백 제거 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1; /* 제목이 남은 공간을 차지하도록 */
+  margin-right: 10px; /* 작성자와의 간격 */
+}
+
+.post-item-author {
+  font-size: 0.85rem;
+  color: #555;
+  white-space: nowrap; /* 작성자 이름이 길어도 한 줄로 */
+  flex-shrink: 0; /* 작성자 이름이 줄어들지 않도록 */
+}
+
 .news-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -986,14 +1543,14 @@ const handleChannelImageError = (event) => {
   background: white;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   cursor: pointer;
 }
 
 .news-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
 }
 
 .news-image {
@@ -1056,7 +1613,7 @@ const handleChannelImageError = (event) => {
   background: white;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
@@ -1064,7 +1621,7 @@ const handleChannelImageError = (event) => {
 
 .video-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
 }
 
 .video-thumbnail {
@@ -1143,7 +1700,7 @@ const handleChannelImageError = (event) => {
   background: white;
   border-radius: 15px;
   padding: 20px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
@@ -1154,7 +1711,7 @@ const handleChannelImageError = (event) => {
 
 .channel-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
 }
 
 .channel-thumbnail {
@@ -1210,7 +1767,7 @@ const handleChannelImageError = (event) => {
   background: white;
   border-radius: 15px;
   padding: 20px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .activity-item {
@@ -1290,31 +1847,35 @@ const handleChannelImageError = (event) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 768px) {
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .profile-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .action-buttons {
     grid-template-columns: 1fr;
   }
-  
+
   .stock-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .news-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .content-wrapper {
     padding: 20px;
   }

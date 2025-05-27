@@ -9,6 +9,7 @@ charset-normalizer==3.4.0
 colorama==0.4.6
 comm==0.2.2
 cryptography==43.0.3
+curl_cffi==0.11.1
 debugpy==1.8.12
 decorator==5.2.1
 defusedxml==0.7.1
@@ -17,11 +18,14 @@ dj-rest-auth==7.0.0
 Django==4.2.16
 django-allauth==0.61.1
 django-cors-headers==4.6.0
+django-environ==0.12.0
 django-extensions==3.2.3
+django-filter==24.2
 djangorestframework==3.15.2
 et_xmlfile==2.0.0
 exceptiongroup==1.2.2
 executing==2.2.0
+frozendict==2.4.6
 h11==0.14.0
 httpcore==1.0.7
 httpx==0.28.1
@@ -35,6 +39,7 @@ jupyter_client==8.6.3
 jupyter_core==5.7.2
 lxml==5.4.0
 matplotlib-inline==0.1.7
+multitasking==0.0.11
 nest-asyncio==1.6.0
 numpy==1.26.3
 oauthlib==3.2.2
@@ -43,9 +48,11 @@ openpyxl==3.1.5
 packaging==24.2
 pandas==2.2.0
 parso==0.8.4
+peewee==3.18.1
 pillow==10.2.0
 platformdirs==4.3.6
 prompt_toolkit==3.0.50
+protobuf==6.31.0
 psutil==6.1.1
 pure_eval==0.2.3
 pycparser==2.22
@@ -77,5 +84,7 @@ typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
 wcwidth==0.2.13
+websockets==15.0.1
 Wikipedia-API==0.7.3
+yfinance==0.2.61
 zipp==3.21.0

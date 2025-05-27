@@ -10,7 +10,7 @@
                 <h2 class="login-title">Welcome Back</h2>
                 <p class="login-subtitle">Sign in to your MyFin account</p>
               </div>
-              
+
               <form @submit.prevent="login" class="login-form">
                 <div class="form-group">
                   <label for="username" class="form-label">Username</label>
@@ -23,7 +23,7 @@
                     class="form-control"
                   />
                 </div>
-                
+
                 <div class="form-group">
                   <label for="password" class="form-label">Password</label>
                   <input
@@ -35,22 +35,61 @@
                     class="form-control"
                   />
                 </div>
-                
-                <button type="submit" class="btn btn-primary btn-login" :disabled="loading">
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                  {{ loading ? 'Signing in...' : 'Sign In' }}
+
+                <button
+                  type="submit"
+                  class="btn btn-primary btn-login"
+                  :disabled="loading"
+                >
+                  <span
+                    v-if="loading"
+                    class="spinner-border spinner-border-sm me-2"
+                  ></span>
+                  {{ loading ? "Signing in..." : "Sign In" }}
                 </button>
               </form>
-              
+
+              <!-- Social Login Buttons -->
+              <div class="social-login-divider my-4">
+                <span class="divider-text">또는 소셜 계정으로 로그인</span>
+              </div>
+              <div class="social-login-buttons">
+                <a
+                  href="http://localhost:8000/accounts/google/login/"
+                  class="btn btn-social btn-google mb-2"
+                >
+                  <img
+                    src="https://developers.google.com/identity/images/g-logo.png"
+                    alt="Google logo"
+                    class="social-icon"
+                  />
+                  Google 계정으로 로그인
+                </a>
+                <a
+                  href="http://localhost:8000/accounts/kakao/login/"
+                  class="btn btn-social btn-kakao"
+                >
+                  <img
+                    src="https://developers.kakao.com/tool/resource/static/img/button/kakaotalksharing/kakaotalk_sharing_btn_medium.png"
+                    alt="Kakao logo"
+                    class="social-icon kakao-icon"
+                  />
+                  Kakao 계정으로 로그인
+                </a>
+              </div>
+              <!-- End Social Login Buttons -->
+
               <div v-if="error" class="alert alert-danger mt-3">
                 <i class="fas fa-exclamation-circle me-2"></i>
                 {{ error }}
               </div>
-              
+
               <div class="login-footer">
                 <p class="text-center">
-                  Don't have an account? 
-                  <router-link to="/signup" class="signup-link">Sign up here</router-link>
+                  Don't have an account?
+                  <router-link to="/signup" class="signup-link"
+                    >Sign up here</router-link
+                  >
                 </p>
               </div>
             </div>
@@ -70,7 +109,7 @@ import { useUserStore } from "@/stores/user";
 const router = useRouter();
 const userStore = useUserStore();
 
-const username = ref("");
+const username = ref(""); // email -> username
 const password = ref("");
 const error = ref("");
 const loading = ref(false);
@@ -78,25 +117,37 @@ const loading = ref(false);
 const login = async () => {
   loading.value = true;
   error.value = "";
-  
+
   try {
     const res = await axios.post("/api/accounts/login/", {
-      username: username.value,
+      username: username.value, // email -> username
       password: password.value,
     });
-    
-    // 로그인 성공 후 사용자 정보 가져오기
-    try {
-      const userRes = await axios.get('/api/accounts/current-user/');
-      userStore.login(userRes.data.username, userRes.data.email);
-    } catch (userErr) {
-      // 사용자 정보를 가져오지 못해도 기본 로그인은 처리
-      userStore.login(res.data.username);
+
+    // 로그인 API 호출 성공. 이제 userStore를 통해 세션 정보를 완전히 업데이트.
+    const sessionIsValid = await userStore.validateSession();
+
+    if (sessionIsValid && userStore.isLogin && userStore.username) {
+      router.push("/");
+    } else {
+      console.error(
+        "Login API call successful, but failed to validate session and retrieve user details subsequently."
+      );
+      error.value =
+        "로그인에 성공했으나 사용자 정보를 최종적으로 가져오는 데 실패했습니다. 잠시 후 다시 시도해주세요.";
+      // 선택: 프론트엔드 상태를 확실히 로그아웃 처리할 수 있음
+      // userStore.logout();
     }
-    
-    router.push("/");
   } catch (err) {
-    error.value = "Login failed: Please check your username and password.";
+    // /api/accounts/login/ 호출 자체가 실패한 경우
+    if (err.response && err.response.data && err.response.data.detail) {
+      error.value = err.response.data.detail;
+    } else if (err.response && err.response.status === 401) {
+      error.value = "아이디 또는 비밀번호가 올바르지 않습니다.";
+    } else {
+      error.value = "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    }
+    // console.error("Login API error:", err.response || err.message);
   } finally {
     loading.value = false;
   }
@@ -235,17 +286,96 @@ const login = async () => {
   height: 1rem;
 }
 
+.social-login-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #6c757d;
+}
+
+.social-login-divider::before,
+.social-login-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.social-login-divider:not(:empty)::before {
+  margin-right: 0.5em;
+}
+
+.social-login-divider:not(:empty)::after {
+  margin-left: 0.5em;
+}
+
+.divider-text {
+  font-size: 0.9rem;
+}
+
+.social-login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* 버튼 사이 간격 */
+  margin-bottom: 1.5rem; /* 아래쪽 여백 */
+}
+
+.btn-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: 1px solid #dee2e6; /* 테두리 추가 */
+}
+
+.btn-social:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.social-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
+.kakao-icon {
+  width: 22px; /* 카카오 아이콘 크기 미세 조정 */
+  height: 22px;
+}
+
+.btn-google {
+  background-color: #ffffff;
+  color: #495057; /* 구글 버튼 텍스트 색상 */
+}
+
+.btn-google:hover {
+  background-color: #f8f9fa;
+}
+
+.btn-kakao {
+  background-color: #fee500;
+  color: #191919; /* 카카오 버튼 텍스트 색상 */
+  border-color: #fee500;
+}
+.btn-kakao:hover {
+  background-color: #fdd835;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .login-card {
     margin: 1rem;
     padding: 2rem;
   }
-  
+
   .login-title {
     font-size: 1.5rem;
   }
-  
+
   .hero-section {
     padding: 40px 0;
   }

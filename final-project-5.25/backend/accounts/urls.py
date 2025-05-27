@@ -1,8 +1,18 @@
 from django.urls import path
 from .views import (
-    SignUpView, LogInView, LogOutView, ProfileView, ProfileDetailView,
-    SurveyView, RecommendationView, UserActivityView, UserStocksView, UserYoutubeView,
-    CSRFTokenView, CurrentUserView
+    SignUpView,
+    LogInView,
+    LogOutView,
+    ProfileView,
+    ProfileDetailView,
+    SurveyView,
+    RecommendationView,
+    UserActivityView,
+    UserStocksView,
+    UserYoutubeView,
+    CSRFTokenView,
+    CurrentUserView,
+    UserScrappedPostsView,  # UserScrappedPostsView 추가
 )
 
 urlpatterns = [
@@ -18,4 +28,7 @@ urlpatterns = [
     path("activities/", UserActivityView.as_view()),
     path("stocks/", UserStocksView.as_view()),
     path("youtube/", UserYoutubeView.as_view()),
+    path(
+        "scrapped-posts/", UserScrappedPostsView.as_view(), name="user_scrapped_posts"
+    ),
 ]

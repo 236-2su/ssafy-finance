@@ -9,5 +9,7 @@ urlpatterns = [
     path("api/youtube/", include("youtube.urls")),
     path("api/commodities/", include("commodities.urls")),
     path("api/news/", include("news_crawler.urls")),
+    path("api/ai-recommendations/", include("ai_recommendations.urls")),
     path("saving/", include("saving.urls")),
+    path("accounts/", include("allauth.urls")),  # django-allauth URL
 ]

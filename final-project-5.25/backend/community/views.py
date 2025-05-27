@@ -4,6 +4,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from django.db.models import Count
 
 from .models import Post, Comment, Like, Bookmark
 from .serializers import PostSerializer, CommentSerializer
@@ -18,19 +19,39 @@ class PostListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        # ?category=free 등 필터링
+        queryset = (
+            Post.objects.all()
+        )  # Post.objects.all()로 시작하여 명시적으로 필터링 순서 제어
         category = self.request.query_params.get("category")
+        sort_by = self.request.query_params.get("sort")
+        author_username = self.request.query_params.get("author_username")
+
+        if author_username:
+            # 특정 사용자의 게시글을 우선적으로 필터링
+            queryset = queryset.filter(author__username=author_username)
+
         if category in dict(Post.CATEGORY_CHOICES):
-            return Post.objects.filter(category=category).order_by("-created_at")
-        return super().get_queryset()
+            # 그 다음 카테고리 필터링 (author_username과 함께 사용될 수 있음)
+            queryset = queryset.filter(category=category)
+
+        if sort_by == "popular":
+            # 정렬: 인기순 (좋아요 수, 최신순)
+            queryset = queryset.annotate(num_likes=Count("likes")).order_by(
+                "-num_likes", "-created_at"
+            )
+        else:
+            # 기본 정렬: 최신순
+            queryset = queryset.order_by("-created_at")
+
+        return queryset
 
     def perform_create(self, serializer):
         post = serializer.save(author=self.request.user)
         # 게시글 작성 활동 기록
         UserActivity.objects.create(
             user=self.request.user,
-            activity_type='community_post',
-            description=f'"{post.title}" 게시글을 작성했습니다.'
+            activity_type="community_post",
+            description=f'"{post.title}" 게시글을 작성했습니다.',
         )
 
 
@@ -39,6 +60,13 @@ class PostRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsAuthorOrReadOnly]
+
+    def get_object(self):
+        obj = super().get_object()
+        # 조회수 증가
+        obj.views += 1
+        obj.save(update_fields=["views"])
+        return obj
 
     def perform_update(self, serializer):
         serializer.save(
@@ -60,8 +88,8 @@ class CommentListCreateView(generics.ListCreateAPIView):
         # 댓글 작성 활동 기록
         UserActivity.objects.create(
             user=self.request.user,
-            activity_type='community_comment',
-            description=f'"{post.title}" 게시글에 댓글을 작성했습니다.'
+            activity_type="community_comment",
+            description=f'"{post.title}" 게시글에 댓글을 작성했습니다.',
         )
 
 
@@ -78,8 +106,10 @@ class LikeToggleView(generics.GenericAPIView):
 
     def post(self, request, pk):
         if not request.user.is_authenticated:
-            return Response({"detail": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
-        
+            return Response(
+                {"detail": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
         post = get_object_or_404(Post, pk=pk)
         obj, created = Like.objects.get_or_create(post=post, user=request.user)
         if not created:
@@ -94,8 +124,10 @@ class BookmarkToggleView(generics.GenericAPIView):
 
     def post(self, request, pk):
         if not request.user.is_authenticated:
-            return Response({"detail": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED)
-        
+            return Response(
+                {"detail": "로그인이 필요합니다."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
         post = get_object_or_404(Post, pk=pk)
         obj, created = Bookmark.objects.get_or_create(post=post, user=request.user)
         if not created:

@@ -9,7 +9,7 @@
         :class="
           youTube.isVideoSaved(video.id) ? 'btn-danger' : 'btn-outline-danger'
         "
-        @click="youTube.toggleVideo(video.id)"
+        @click="toggleVideoHandler"
       >
         {{
           youTube.isVideoSaved(video.id) ? "나중에 보기 취소" : "나중에 보기"
@@ -23,7 +23,7 @@
             ? 'btn-success'
             : 'btn-outline-success'
         "
-        @click="youTube.toggleChannel(video.snippet.channelId)"
+        @click="toggleChannelHandler"
       >
         {{
           youTube.isChannelSaved(video.snippet.channelId)
@@ -72,4 +72,33 @@ async function fetchDetail() {
 }
 
 onMounted(fetchDetail);
+
+function toggleVideoHandler() {
+  if (!video.value) return;
+  const currentVideo = video.value;
+  const videoData = {
+    video_id: currentVideo.id,
+    title: currentVideo.snippet.title,
+    channel_title: currentVideo.snippet.channelTitle,
+    thumbnail_url: currentVideo.snippet.thumbnails.medium.url, // 또는 high.url
+    description: currentVideo.snippet.description,
+    published_at: currentVideo.snippet.publishedAt,
+    added_at: new Date().toISOString(),
+  };
+  youTube.toggleVideo(currentVideo.id, videoData);
+}
+
+function toggleChannelHandler() {
+  if (!video.value) return;
+  const currentVideoSnippet = video.value.snippet;
+  const channelData = {
+    channel_id: currentVideoSnippet.channelId,
+    title: currentVideoSnippet.channelTitle,
+    // 채널 썸네일은 이 API 응답에 없을 수 있으므로,
+    // youtube.js 스토어에서 기본값을 사용하거나, ChannelView에서 나중에 로드합니다.
+    // thumbnail_url: '기본값 또는 나중에 채워짐',
+    added_at: new Date().toISOString(),
+  };
+  youTube.toggleChannel(currentVideoSnippet.channelId, channelData);
+}
 </script>

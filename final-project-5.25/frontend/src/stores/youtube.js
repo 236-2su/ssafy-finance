@@ -12,7 +12,7 @@ export const useYouTubeStore = defineStore("youtube", () => {
   // 백엔드에서 사용자의 저장된 영상/채널 불러오기
   async function loadUserData() {
     if (!userStore.isLogin) return;
-    
+
     try {
       const response = await axios.get("/api/accounts/profile/");
       if (response.data.watch_later_videos) {
@@ -32,7 +32,7 @@ export const useYouTubeStore = defineStore("youtube", () => {
   function loadFromLocalStorage() {
     const videos = localStorage.getItem("savedVideos");
     const channels = localStorage.getItem("savedChannels");
-    
+
     if (videos) {
       savedVideos.value = JSON.parse(videos);
     }
@@ -44,7 +44,7 @@ export const useYouTubeStore = defineStore("youtube", () => {
   // 영상 토글
   async function toggleVideo(videoId, videoData = null) {
     const isCurrentlySaved = isVideoSaved(videoId);
-    
+
     if (userStore.isLogin) {
       try {
         if (isCurrentlySaved) {
@@ -52,11 +52,11 @@ export const useYouTubeStore = defineStore("youtube", () => {
           await axios.delete("/api/accounts/youtube/", {
             data: {
               type: "video",
-              content_id: videoId
-            }
+              content_id: videoId,
+            },
           });
-          savedVideos.value = savedVideos.value.filter(video => 
-            video.video_id !== videoId
+          savedVideos.value = savedVideos.value.filter(
+            (video) => video.video_id !== videoId
           );
         } else {
           // 추가
@@ -65,12 +65,12 @@ export const useYouTubeStore = defineStore("youtube", () => {
             title: "Unknown Video",
             channel_title: "Unknown Channel",
             thumbnail_url: "",
-            added_at: new Date().toISOString()
+            added_at: new Date().toISOString(),
           };
-          
+
           await axios.post("/api/accounts/youtube/", {
             type: "video",
-            content_data: contentData
+            content_data: contentData,
           });
           savedVideos.value.push(contentData);
         }
@@ -87,7 +87,7 @@ export const useYouTubeStore = defineStore("youtube", () => {
   // 채널 토글
   async function toggleChannel(channelId, channelData = null) {
     const isCurrentlySaved = isChannelSaved(channelId);
-    
+
     if (userStore.isLogin) {
       try {
         if (isCurrentlySaved) {
@@ -95,12 +95,14 @@ export const useYouTubeStore = defineStore("youtube", () => {
           await axios.delete("/api/accounts/youtube/", {
             data: {
               type: "channel",
-              content_id: channelId
-            }
+              content_id: channelId,
+            },
           });
-          savedChannels.value = savedChannels.value.filter(channel => 
-            channel.channel_id !== channelId
-          );
+          savedChannels.value = savedChannels.value.filter((channel) => {
+            const id =
+              typeof channel === "object" ? channel.channel_id : channel;
+            return id !== channelId;
+          });
         } else {
           // 추가
           const contentData = channelData || {
@@ -108,12 +110,12 @@ export const useYouTubeStore = defineStore("youtube", () => {
             title: "Unknown Channel",
             thumbnail_url: "",
             subscriber_count: 0,
-            added_at: new Date().toISOString()
+            added_at: new Date().toISOString(),
           };
-          
+
           await axios.post("/api/accounts/youtube/", {
             type: "channel",
-            content_data: contentData
+            content_data: contentData,
           });
           savedChannels.value.push(contentData);
         }
@@ -129,8 +131,10 @@ export const useYouTubeStore = defineStore("youtube", () => {
 
   // localStorage 영상 토글 (비로그인 사용자용)
   function toggleVideoLocalStorage(videoId, videoData) {
-    const index = savedVideos.value.findIndex(video => video.video_id === videoId);
-    
+    const index = savedVideos.value.findIndex(
+      (video) => video.video_id === videoId
+    );
+
     if (index > -1) {
       savedVideos.value.splice(index, 1);
     } else {
@@ -139,18 +143,21 @@ export const useYouTubeStore = defineStore("youtube", () => {
         title: "Unknown Video",
         channel_title: "Unknown Channel",
         thumbnail_url: "",
-        added_at: new Date().toISOString()
+        added_at: new Date().toISOString(),
       };
       savedVideos.value.push(contentData);
     }
-    
+
     localStorage.setItem("savedVideos", JSON.stringify(savedVideos.value));
   }
 
   // localStorage 채널 토글 (비로그인 사용자용)
   function toggleChannelLocalStorage(channelId, channelData) {
-    const index = savedChannels.value.findIndex(channel => channel.channel_id === channelId);
-    
+    const index = savedChannels.value.findIndex((channel) => {
+      const id = typeof channel === "object" ? channel.channel_id : channel;
+      return id === channelId;
+    });
+
     if (index > -1) {
       savedChannels.value.splice(index, 1);
     } else {
@@ -159,21 +166,24 @@ export const useYouTubeStore = defineStore("youtube", () => {
         title: "Unknown Channel",
         thumbnail_url: "",
         subscriber_count: 0,
-        added_at: new Date().toISOString()
+        added_at: new Date().toISOString(),
       };
       savedChannels.value.push(contentData);
     }
-    
+
     localStorage.setItem("savedChannels", JSON.stringify(savedChannels.value));
   }
 
   // 상태 체크
   function isVideoSaved(videoId) {
-    return savedVideos.value.some(video => video.video_id === videoId);
+    return savedVideos.value.some((video) => video.video_id === videoId);
   }
 
   function isChannelSaved(channelId) {
-    return savedChannels.value.some(channel => channel.channel_id === channelId);
+    return savedChannels.value.some((channel) => {
+      const id = typeof channel === "object" ? channel.channel_id : channel;
+      return id === channelId;
+    });
   }
 
   // 초기화
@@ -200,6 +210,6 @@ export const useYouTubeStore = defineStore("youtube", () => {
     isChannelSaved,
     initialize,
     clearData,
-    loadUserData
+    loadUserData,
   };
 });

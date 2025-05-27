@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-0#lskyl8ln(u2%$4wpkh%6^cs$s*pl1!@_jtpp)t*7y9#8@+__
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "community",
     "main",
     "news_crawler",
+    "ai_recommendations",
     "rest_framework",
     "rest_framework.authtoken",
     "accounts",
@@ -47,6 +48,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # django-allauth
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.kakao",
 ]
 
 MIDDLEWARE = [
@@ -56,6 +64,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",  # CSRF 활성화
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  # django-allauth middleware
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -138,27 +147,32 @@ AUTH_USER_MODEL = "accounts.User"
 SESSION_COOKIE_AGE = 86400  # 24시간
 SESSION_COOKIE_SECURE = False  # 개발환경에서는 False
 SESSION_COOKIE_HTTPONLY = False  # JavaScript에서 접근 가능하도록 False
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_NAME = "sessionid"
 SESSION_COOKIE_DOMAIN = None
 
 # CSRF 설정
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5176", "http://localhost:5177"]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5176",
+    "http://localhost:5177",
+]
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_DOMAIN = None
 
 # REST Framework 설정
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
     ],
 }
 
@@ -172,16 +186,73 @@ CORS_ALLOWED_ORIGINS = [
 ]
 # CORS_ALLOW_ALL_ORIGINS = True  # 주석 처리 - CORS_ALLOWED_ORIGINS와 충돌 방지
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
+
+# Django Allauth settings
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = (
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
+    # `allauth` specific authentication methods, such as login by e-mail
+    "allauth.account.auth_backends.AuthenticationBackend",
+)
+
+# Provider specific settings
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "online",
+            "prompt": "select_account",  # 구글 계정 선택 화면 강제 표시
+        },
+        "APP": {
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+            "secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+            "key": "",
+        },
+    },
+    "kakao": {
+        "AUTH_PARAMS": {
+            "prompt": "login",  # 카카오 로그인 화면 강제 표시
+        },
+        "APP": {
+            "client_id": os.environ.get("KAKAO_REST_API_KEY"),
+            "secret": os.environ.get(
+                "KAKAO_CLIENT_SECRET"
+            ),  # 카카오는 Client Secret이 필수는 아님
+            "key": "",
+        },
+    },
+}
+
+LOGIN_REDIRECT_URL = "http://localhost:5173/"  # 로그인 후 프론트엔드 메인으로 리디렉션
+ACCOUNT_LOGOUT_REDIRECT_URL = (
+    "http://localhost:5173/login"  # 로그아웃 후 프론트엔드 로그인 페이지로 리디렉션
+)
+ACCOUNT_EMAIL_VERIFICATION = "none"  # 이메일 인증 사용 안 함
+ACCOUNT_AUTHENTICATION_METHOD = "username"  # 사용자 이름으로 로그인
+ACCOUNT_EMAIL_REQUIRED = True  # 이메일은 여전히 필수로 유지 (회원가입 시)
+ACCOUNT_USERNAME_REQUIRED = True  # 사용자 이름 필수
+SOCIALACCOUNT_LOGIN_ON_GET = (
+    True  # GET 요청으로도 소셜 로그인 처리 (개발 편의성, 운영 시 주의)
+)
+
+# Custom SocialAccountAdapter
+SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomSocialAccountAdapter"
+
 
 # .env 에서 읽어오기
 from pathlib import Path

@@ -10,9 +10,14 @@
                 맞춤형 투자 상품 추천을 위해 몇 가지 질문에 답해주세요.
               </p>
               <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
+                <div
+                  class="progress-fill"
+                  :style="{ width: progressPercentage + '%' }"
+                ></div>
               </div>
-              <span class="progress-text">{{ currentStep }}/{{ totalSteps }}</span>
+              <span class="progress-text"
+                >{{ currentStep }}/{{ totalSteps }}</span
+              >
             </div>
 
             <form @submit.prevent="submitSurvey" class="survey-form">
@@ -20,13 +25,17 @@
               <div v-if="currentStep === 1" class="survey-step">
                 <h3 class="step-title">주식 투자 경험이 어느 정도인가요?</h3>
                 <div class="options-grid">
-                  <label v-for="option in stockExperienceOptions" :key="option.value" class="option-card">
-                    <input 
-                      type="radio" 
-                      v-model="surveyData.stock_experience" 
+                  <label
+                    v-for="option in stockExperienceOptions"
+                    :key="option.value"
+                    class="option-card"
+                  >
+                    <input
+                      type="radio"
+                      v-model="surveyData.stock_experience"
                       :value="option.value"
                       class="option-input"
-                    >
+                    />
                     <div class="option-content">
                       <i :class="option.icon" class="option-icon"></i>
                       <h4>{{ option.label }}</h4>
@@ -40,13 +49,17 @@
               <div v-if="currentStep === 2" class="survey-step">
                 <h3 class="step-title">투자 성향은 어떻게 되시나요?</h3>
                 <div class="options-grid">
-                  <label v-for="option in investmentStyleOptions" :key="option.value" class="option-card">
-                    <input 
-                      type="radio" 
-                      v-model="surveyData.investment_style" 
+                  <label
+                    v-for="option in investmentStyleOptions"
+                    :key="option.value"
+                    class="option-card"
+                  >
+                    <input
+                      type="radio"
+                      v-model="surveyData.investment_style"
                       :value="option.value"
                       class="option-input"
-                    >
+                    />
                     <div class="option-content">
                       <i :class="option.icon" class="option-icon"></i>
                       <h4>{{ option.label }}</h4>
@@ -60,13 +73,17 @@
               <div v-if="currentStep === 3" class="survey-step">
                 <h3 class="step-title">월 투자 가능 금액은 얼마인가요?</h3>
                 <div class="options-grid">
-                  <label v-for="option in monthlyAmountOptions" :key="option.value" class="option-card">
-                    <input 
-                      type="radio" 
-                      v-model="surveyData.monthly_investment_amount" 
+                  <label
+                    v-for="option in monthlyAmountOptions"
+                    :key="option.value"
+                    class="option-card"
+                  >
+                    <input
+                      type="radio"
+                      v-model="surveyData.monthly_investment_amount"
                       :value="option.value"
                       class="option-input"
-                    >
+                    />
                     <div class="option-content">
                       <i :class="option.icon" class="option-icon"></i>
                       <h4>{{ option.label }}</h4>
@@ -80,13 +97,17 @@
               <div v-if="currentStep === 4" class="survey-step">
                 <h3 class="step-title">투자 목적은 무엇인가요?</h3>
                 <div class="options-grid">
-                  <label v-for="option in investmentGoalOptions" :key="option.value" class="option-card">
-                    <input 
-                      type="radio" 
-                      v-model="surveyData.investment_goal" 
+                  <label
+                    v-for="option in investmentGoalOptions"
+                    :key="option.value"
+                    class="option-card"
+                  >
+                    <input
+                      type="radio"
+                      v-model="surveyData.investment_goal"
                       :value="option.value"
                       class="option-input"
-                    >
+                    />
                     <div class="option-content">
                       <i :class="option.icon" class="option-icon"></i>
                       <h4>{{ option.label }}</h4>
@@ -101,29 +122,47 @@
                 <h3 class="step-title">현재 보유하고 있는 주식이 있나요?</h3>
                 <div class="stock-input-section">
                   <div class="input-group mb-3">
-                    <input 
-                      type="text" 
-                      v-model="newOwnedStock.code" 
-                      placeholder="주식 코드 (예: 005930)"
+                    <input
+                      type="text"
+                      v-model="ownedStockSearchQuery"
+                      @input="searchOwnedStocks"
+                      placeholder="주식명 또는 코드 검색"
                       class="form-control"
+                    />
+                  </div>
+                  <div
+                    v-if="ownedStockSearchResults.length > 0"
+                    class="search-results list-group mb-3"
+                  >
+                    <button
+                      type="button"
+                      class="list-group-item list-group-item-action"
+                      v-for="stock in ownedStockSearchResults"
+                      :key="stock.stock_code"
+                      @click="selectOwnedStock(stock)"
                     >
-                    <input 
-                      type="text" 
-                      v-model="newOwnedStock.name" 
-                      placeholder="주식명 (예: 삼성전자)"
-                      class="form-control"
-                    >
-                    <button type="button" @click="addOwnedStock" class="btn btn-primary">추가</button>
+                      {{ stock.stock_name }} ({{ stock.stock_code }})
+                    </button>
                   </div>
                   <div class="stock-list">
-                    <div v-for="(stock, index) in surveyData.owned_stocks" :key="index" class="stock-item">
+                    <div
+                      v-for="(stock, index) in surveyData.owned_stocks"
+                      :key="index"
+                      class="stock-item"
+                    >
                       <span>{{ stock.name }} ({{ stock.code }})</span>
-                      <button type="button" @click="removeOwnedStock(index)" class="btn btn-sm btn-outline-danger">
+                      <button
+                        type="button"
+                        @click="removeOwnedStock(index)"
+                        class="btn btn-sm btn-outline-danger"
+                      >
                         <i class="fas fa-times"></i>
                       </button>
                     </div>
                   </div>
-                  <p class="text-muted mt-2">보유 주식이 없다면 다음 단계로 넘어가세요.</p>
+                  <p class="text-muted mt-2">
+                    보유 주식이 없다면 다음 단계로 넘어가세요.
+                  </p>
                 </div>
               </div>
 
@@ -132,60 +171,89 @@
                 <h3 class="step-title">관심있는 주식이 있나요?</h3>
                 <div class="stock-input-section">
                   <div class="input-group mb-3">
-                    <input 
-                      type="text" 
-                      v-model="newInterestedStock.code" 
-                      placeholder="주식 코드 (예: 035720)"
+                    <input
+                      type="text"
+                      v-model="interestedStockSearchQuery"
+                      @input="searchInterestedStocks"
+                      placeholder="주식명 또는 코드 검색"
                       class="form-control"
+                    />
+                  </div>
+                  <div
+                    v-if="interestedStockSearchResults.length > 0"
+                    class="search-results list-group mb-3"
+                  >
+                    <button
+                      type="button"
+                      class="list-group-item list-group-item-action"
+                      v-for="stock in interestedStockSearchResults"
+                      :key="stock.stock_code"
+                      @click="selectInterestedStock(stock)"
                     >
-                    <input 
-                      type="text" 
-                      v-model="newInterestedStock.name" 
-                      placeholder="주식명 (예: 카카오)"
-                      class="form-control"
-                    >
-                    <button type="button" @click="addInterestedStock" class="btn btn-primary">추가</button>
+                      {{ stock.stock_name }} ({{ stock.stock_code }})
+                    </button>
                   </div>
                   <div class="stock-list">
-                    <div v-for="(stock, index) in surveyData.interested_stocks" :key="index" class="stock-item">
-                      <span>{{ stock.name }} ({{ stock.code }})</span>
-                      <button type="button" @click="removeInterestedStock(index)" class="btn btn-sm btn-outline-danger">
+                    <div
+                      v-for="(stock, index) in surveyData.interested_stocks"
+                      :key="stock.code || index"
+                      class="stock-item"
+                    >
+                      <span v-if="stock && stock.name"
+                        >{{ stock.name }}
+                        <span
+                          v-if="
+                            stock.code && !stock.code.startsWith('interest_')
+                          "
+                          >({{ stock.code }})</span
+                        ></span
+                      >
+                      <button
+                        type="button"
+                        @click="removeInterestedStock(index)"
+                        class="btn btn-sm btn-outline-danger"
+                      >
                         <i class="fas fa-times"></i>
                       </button>
                     </div>
                   </div>
-                  <p class="text-muted mt-2">관심 주식이 없다면 다음 단계로 넘어가세요.</p>
+                  <p class="text-muted mt-2">
+                    관심 주식이 없다면 다음 단계로 넘어가세요.
+                  </p>
                 </div>
               </div>
 
               <!-- Navigation Buttons -->
               <div class="survey-navigation">
-                <button 
-                  type="button" 
-                  @click="previousStep" 
+                <button
+                  type="button"
+                  @click="previousStep"
                   v-if="currentStep > 1"
                   class="btn btn-outline-secondary"
                 >
                   <i class="fas fa-arrow-left me-2"></i>이전
                 </button>
-                
-                <button 
-                  type="button" 
-                  @click="nextStep" 
+
+                <button
+                  type="button"
+                  @click="nextStep"
                   v-if="currentStep < totalSteps"
                   :disabled="!isCurrentStepValid"
                   class="btn btn-primary ms-auto"
                 >
                   다음<i class="fas fa-arrow-right ms-2"></i>
                 </button>
-                
-                <button 
-                  type="submit" 
+
+                <button
+                  type="submit"
                   v-if="currentStep === totalSteps"
                   :disabled="loading || !isCurrentStepValid"
                   class="btn btn-success ms-auto"
                 >
-                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                  <span
+                    v-if="loading"
+                    class="spinner-border spinner-border-sm me-2"
+                  ></span>
                   설문 완료
                 </button>
               </div>
@@ -196,15 +264,23 @@
     </div>
 
     <!-- Success Modal -->
-    <div v-if="showSuccessModal" class="modal-overlay" @click="closeSuccessModal">
+    <div
+      v-if="showSuccessModal"
+      class="modal-overlay"
+      @click="closeSuccessModal"
+    >
       <div class="success-modal" @click.stop>
         <div class="success-content">
           <i class="fas fa-check-circle success-icon"></i>
           <h3>설문조사 완료!</h3>
           <p>맞춤형 투자 상품 추천을 확인해보세요.</p>
           <div class="modal-buttons">
-            <button @click="goToRecommendations" class="btn btn-primary">추천 보기</button>
-            <button @click="goToProfile" class="btn btn-outline-secondary">프로필로 이동</button>
+            <button @click="goToRecommendations" class="btn btn-primary">
+              추천 보기
+            </button>
+            <button @click="goToProfile" class="btn btn-outline-secondary">
+              프로필로 이동
+            </button>
           </div>
         </div>
       </div>
@@ -213,224 +289,301 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import axios from 'axios'
+import { ref, computed, onMounted } from "vue";
+import { useRouter, useRoute } from "vue-router"; // useRoute 추가
+import { useUserStore } from "@/stores/user";
+import axios from "axios";
 
-const router = useRouter()
-const userStore = useUserStore()
+const router = useRouter();
+const route = useRoute(); // route 객체 사용
+const userStore = useUserStore();
 
-const currentStep = ref(1)
-const totalSteps = 6
-const loading = ref(false)
-const showSuccessModal = ref(false)
+const currentStep = ref(1);
+const totalSteps = 6;
+const loading = ref(false);
+const showSuccessModal = ref(false);
 
 const surveyData = ref({
-  stock_experience: '',
-  investment_style: '',
-  monthly_investment_amount: '',
-  investment_goal: '',
-  owned_stocks: [],
-  interested_stocks: []
-})
+  stock_experience: "",
+  investment_style: "",
+  monthly_investment_amount: "",
+  investment_goal: "",
+  owned_stocks: [], // { code: '005930', name: '삼성전자' } 형태
+  interested_stocks: [], // { code: '005930', name: '삼성전자' } 형태
+});
 
-const newOwnedStock = ref({ code: '', name: '' })
-const newInterestedStock = ref({ code: '', name: '' })
+// 주식 검색 관련 ref
+const ownedStockSearchQuery = ref("");
+const ownedStockSearchResults = ref([]);
+const interestedStockSearchQuery = ref("");
+const interestedStockSearchResults = ref([]);
+
+// API 호출 지연을 위한 디바운스 함수
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func.apply(null, args);
+    }, delay);
+  };
+};
+
+// 보유 주식 검색 API 호출 (디바운싱 적용)
+const searchOwnedStocksAPI = async () => {
+  if (ownedStockSearchQuery.value.trim() === "") {
+    ownedStockSearchResults.value = [];
+    return;
+  }
+  try {
+    const response = await axios.get(
+      `/api/main/stocks/search/?query=${ownedStockSearchQuery.value}`
+    );
+    ownedStockSearchResults.value = response.data;
+  } catch (error) {
+    console.error("Error searching owned stocks:", error);
+    ownedStockSearchResults.value = [];
+  }
+};
+const searchOwnedStocks = debounce(searchOwnedStocksAPI, 300);
+
+// 관심 주식 검색 API 호출 (디바운싱 적용)
+const searchInterestedStocksAPI = async () => {
+  if (interestedStockSearchQuery.value.trim() === "") {
+    interestedStockSearchResults.value = [];
+    return;
+  }
+  try {
+    const response = await axios.get(
+      `/api/main/stocks/search/?query=${interestedStockSearchQuery.value}`
+    );
+    interestedStockSearchResults.value = response.data;
+  } catch (error) {
+    console.error("Error searching interested stocks:", error);
+    interestedStockSearchResults.value = [];
+  }
+};
+const searchInterestedStocks = debounce(searchInterestedStocksAPI, 300);
 
 const stockExperienceOptions = [
   {
-    value: 'none',
-    label: '투자 경험 없음',
-    description: '주식 투자를 해본 적이 없습니다',
-    icon: 'fas fa-seedling'
+    value: "none",
+    label: "투자 경험 없음",
+    description: "주식 투자를 해본 적이 없습니다",
+    icon: "fas fa-seedling",
   },
   {
-    value: 'beginner',
-    label: '초보 (1년 미만)',
-    description: '주식 투자를 시작한 지 1년이 안 되었습니다',
-    icon: 'fas fa-leaf'
+    value: "beginner",
+    label: "초보 (1년 미만)",
+    description: "주식 투자를 시작한 지 1년이 안 되었습니다",
+    icon: "fas fa-leaf",
   },
   {
-    value: 'intermediate',
-    label: '중급 (1-3년)',
-    description: '1년 이상 3년 미만의 투자 경험이 있습니다',
-    icon: 'fas fa-chart-line'
+    value: "intermediate",
+    label: "중급 (1-3년)",
+    description: "1년 이상 3년 미만의 투자 경험이 있습니다",
+    icon: "fas fa-chart-line",
   },
   {
-    value: 'advanced',
-    label: '고급 (3년 이상)',
-    description: '3년 이상의 풍부한 투자 경험이 있습니다',
-    icon: 'fas fa-trophy'
-  }
-]
+    value: "advanced",
+    label: "고급 (3년 이상)",
+    description: "3년 이상의 풍부한 투자 경험이 있습니다",
+    icon: "fas fa-trophy",
+  },
+];
 
 const investmentStyleOptions = [
   {
-    value: 'conservative',
-    label: '안전형',
-    description: '원금 보장을 중시하며 안정적인 수익을 추구합니다',
-    icon: 'fas fa-shield-alt'
+    value: "conservative",
+    label: "안전형",
+    description: "원금 보장을 중시하며 안정적인 수익을 추구합니다",
+    icon: "fas fa-shield-alt",
   },
   {
-    value: 'moderate',
-    label: '중립형',
-    description: '적당한 위험을 감수하며 균형잡힌 투자를 선호합니다',
-    icon: 'fas fa-balance-scale'
+    value: "moderate",
+    label: "중립형",
+    description: "적당한 위험을 감수하며 균형잡힌 투자를 선호합니다",
+    icon: "fas fa-balance-scale",
   },
   {
-    value: 'aggressive',
-    label: '공격형',
-    description: '높은 수익을 위해 위험을 감수할 수 있습니다',
-    icon: 'fas fa-rocket'
-  }
-]
+    value: "aggressive",
+    label: "공격형",
+    description: "높은 수익을 위해 위험을 감수할 수 있습니다",
+    icon: "fas fa-rocket",
+  },
+];
 
 const monthlyAmountOptions = [
   {
-    value: 'under_50',
-    label: '50만원 미만',
-    description: '소액으로 투자를 시작하고 싶습니다',
-    icon: 'fas fa-coins'
+    value: "under_50",
+    label: "50만원 미만",
+    description: "소액으로 투자를 시작하고 싶습니다",
+    icon: "fas fa-coins",
   },
   {
-    value: '50_100',
-    label: '50-100만원',
-    description: '적당한 금액으로 꾸준히 투자하고 싶습니다',
-    icon: 'fas fa-wallet'
+    value: "50_100",
+    label: "50-100만원",
+    description: "적당한 금액으로 꾸준히 투자하고 싶습니다",
+    icon: "fas fa-wallet",
   },
   {
-    value: '100_300',
-    label: '100-300만원',
-    description: '여유 자금으로 본격적인 투자를 하고 싶습니다',
-    icon: 'fas fa-money-bill-wave'
+    value: "100_300",
+    label: "100-300만원",
+    description: "여유 자금으로 본격적인 투자를 하고 싶습니다",
+    icon: "fas fa-money-bill-wave",
   },
   {
-    value: 'over_300',
-    label: '300만원 이상',
-    description: '충분한 자금으로 다양한 투자를 하고 싶습니다',
-    icon: 'fas fa-gem'
-  }
-]
+    value: "over_300",
+    label: "300만원 이상",
+    description: "충분한 자금으로 다양한 투자를 하고 싶습니다",
+    icon: "fas fa-gem",
+  },
+];
 
 const investmentGoalOptions = [
   {
-    value: 'short_term',
-    label: '단기 수익',
-    description: '1년 이내 빠른 수익을 목표로 합니다',
-    icon: 'fas fa-bolt'
+    value: "short_term",
+    label: "단기 수익",
+    description: "1년 이내 빠른 수익을 목표로 합니다",
+    icon: "fas fa-bolt",
   },
   {
-    value: 'long_term',
-    label: '장기 투자',
-    description: '5년 이상 장기적인 자산 증식을 목표로 합니다',
-    icon: 'fas fa-mountain'
+    value: "long_term",
+    label: "장기 투자",
+    description: "5년 이상 장기적인 자산 증식을 목표로 합니다",
+    icon: "fas fa-mountain",
   },
   {
-    value: 'retirement',
-    label: '은퇴 준비',
-    description: '노후를 위한 안정적인 자산 형성이 목표입니다',
-    icon: 'fas fa-umbrella'
+    value: "retirement",
+    label: "은퇴 준비",
+    description: "노후를 위한 안정적인 자산 형성이 목표입니다",
+    icon: "fas fa-umbrella",
   },
   {
-    value: 'emergency_fund',
-    label: '비상 자금',
-    description: '예상치 못한 상황에 대비한 자금 마련이 목표입니다',
-    icon: 'fas fa-first-aid'
-  }
-]
+    value: "emergency_fund",
+    label: "비상 자금",
+    description: "예상치 못한 상황에 대비한 자금 마련이 목표입니다",
+    icon: "fas fa-first-aid",
+  },
+];
 
 const progressPercentage = computed(() => {
-  return (currentStep.value / totalSteps) * 100
-})
+  return (currentStep.value / totalSteps) * 100;
+});
 
 const isCurrentStepValid = computed(() => {
   switch (currentStep.value) {
     case 1:
-      return surveyData.value.stock_experience !== ''
+      return surveyData.value.stock_experience !== "";
     case 2:
-      return surveyData.value.investment_style !== ''
+      return surveyData.value.investment_style !== "";
     case 3:
-      return surveyData.value.monthly_investment_amount !== ''
+      return surveyData.value.monthly_investment_amount !== "";
     case 4:
-      return surveyData.value.investment_goal !== ''
+      return surveyData.value.investment_goal !== "";
     case 5:
     case 6:
-      return true // 주식 정보는 선택사항
+      return true; // 주식 정보는 선택사항
     default:
-      return false
+      return false;
   }
-})
+});
 
 const nextStep = () => {
   if (currentStep.value < totalSteps && isCurrentStepValid.value) {
-    currentStep.value++
+    currentStep.value++;
   }
-}
+};
 
 const previousStep = () => {
   if (currentStep.value > 1) {
-    currentStep.value--
+    currentStep.value--;
   }
-}
+};
 
-const addOwnedStock = () => {
-  if (newOwnedStock.value.code && newOwnedStock.value.name) {
+// 보유 주식 선택
+const selectOwnedStock = (stock) => {
+  // 중복 추가 방지
+  if (!surveyData.value.owned_stocks.find((s) => s.code === stock.stock_code)) {
     surveyData.value.owned_stocks.push({
-      code: newOwnedStock.value.code,
-      name: newOwnedStock.value.name
-    })
-    newOwnedStock.value = { code: '', name: '' }
+      code: stock.stock_code,
+      name: stock.stock_name,
+    });
   }
-}
+  ownedStockSearchQuery.value = "";
+  ownedStockSearchResults.value = [];
+};
 
 const removeOwnedStock = (index) => {
-  surveyData.value.owned_stocks.splice(index, 1)
-}
+  surveyData.value.owned_stocks.splice(index, 1);
+};
 
-const addInterestedStock = () => {
-  if (newInterestedStock.value.code && newInterestedStock.value.name) {
+// 관심 주식 선택
+const selectInterestedStock = (stock) => {
+  // 중복 추가 방지
+  if (
+    !surveyData.value.interested_stocks.find((s) => s.code === stock.stock_code)
+  ) {
     surveyData.value.interested_stocks.push({
-      code: newInterestedStock.value.code,
-      name: newInterestedStock.value.name
-    })
-    newInterestedStock.value = { code: '', name: '' }
+      code: stock.stock_code,
+      name: stock.stock_name,
+    });
   }
-}
+  interestedStockSearchQuery.value = "";
+  interestedStockSearchResults.value = [];
+};
 
 const removeInterestedStock = (index) => {
-  surveyData.value.interested_stocks.splice(index, 1)
-}
+  surveyData.value.interested_stocks.splice(index, 1);
+};
 
 const submitSurvey = async () => {
-  if (!isCurrentStepValid.value) return
-  
-  loading.value = true
+  if (!isCurrentStepValid.value) return;
+
+  loading.value = true;
   try {
-    const response = await axios.post('/api/accounts/survey/', surveyData.value)
-    console.log('Survey submitted:', response.data)
-    showSuccessModal.value = true
+    // 전송 전에 interested_stocks를 이름 문자열 배열로 변환
+    const validInterestedStockNames = surveyData.value.interested_stocks
+      .filter(
+        (stock) =>
+          stock && typeof stock.name === "string" && stock.name.trim() !== ""
+      )
+      .map((stock) => stock.name);
+
+    const payload = {
+      ...surveyData.value,
+      interested_stocks: validInterestedStockNames,
+    };
+    // owned_stocks는 객체 배열 {code, name} 그대로 전송 (User 모델의 JSONField와 호환)
+    // owned_stocks도 유효성 검사 추가 가능 (예: filter(s => s && s.code && s.name))
+
+    const response = await axios.post(
+      "/api/accounts/survey/",
+      payload // 수정된 payload 사용
+    );
+    console.log("Survey submitted:", response.data);
+    showSuccessModal.value = true;
   } catch (error) {
-    console.error('Survey submission error:', error)
-    alert('설문조사 제출 중 오류가 발생했습니다.')
+    console.error("Survey submission error:", error);
+    alert("설문조사 제출 중 오류가 발생했습니다.");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const closeSuccessModal = () => {
-  showSuccessModal.value = false
-}
+  showSuccessModal.value = false;
+};
 
 const goToRecommendations = () => {
-  showSuccessModal.value = false
-  router.push('/recommendations')
-}
+  showSuccessModal.value = false;
+  router.push("/recommendations");
+};
 
 const goToProfile = () => {
-  showSuccessModal.value = false
-  router.push('/profile')
-}
+  showSuccessModal.value = false;
+  router.push("/profile");
+};
 
 onMounted(async () => {
   // 인증 체크
@@ -440,10 +593,58 @@ onMounted(async () => {
   }
 
   // 이미 설문조사를 완료한 사용자인지 확인
-  if (userStore.user && userStore.user.survey_completed) {
-    router.push('/profile')
+  const isRetake = route.query.retake === "true";
+
+  if (userStore.user && userStore.user.survey_completed && !isRetake) {
+    router.push("/profile");
+  } else if (isRetake && userStore.isLogin) {
+    // 설문조사 다시하기 모드이고 로그인 상태일 때 기존 데이터 로드
+    try {
+      // userStore의 fetchUserProfile을 호출하여 최신 프로필 정보를 가져옴
+      const userProfileData = await userStore.fetchUserProfile();
+
+      if (userProfileData) {
+        surveyData.value.stock_experience =
+          userProfileData.stock_experience || "";
+        surveyData.value.investment_style =
+          userProfileData.investment_style || "";
+        surveyData.value.monthly_investment_amount =
+          userProfileData.monthly_investment_amount || "";
+        surveyData.value.investment_goal =
+          userProfileData.investment_goal || "";
+
+        // owned_stocks와 interested_stocks는 이미 배열 형태이므로 그대로 할당
+        // (백엔드 User 모델에서 JSONField(default=list)로 정의됨)
+        surveyData.value.owned_stocks = userProfileData.owned_stocks
+          ? [...userProfileData.owned_stocks].filter(
+              (s) =>
+                s && typeof s.name === "string" && typeof s.code === "string"
+            ) // 유효한 객체만 필터링
+          : [];
+
+        // interested_stocks는 문자열 배열로 오므로, {name: string, code: string} 형태의 객체 배열로 변환
+        surveyData.value.interested_stocks = userProfileData.interested_stocks
+          ? userProfileData.interested_stocks
+              .filter((name) => typeof name === "string" && name.trim() !== "") // 유효한 문자열 이름만 필터링
+              .map((name) => ({ name: name, code: `interest_${name}` })) // name을 기반으로 임시 code 부여
+          : [];
+      } else {
+        console.error(
+          "프로필 데이터 로드 실패 (userProfileData is null or undefined)"
+        );
+      }
+    } catch (error) {
+      console.error("기존 설문 데이터 로드 실패:", error);
+      // 오류 발생 시 빈 설문지로 시작
+    }
+  } else if (!isRetake && userStore.user && !userStore.user.survey_completed) {
+    // 첫 설문조사인 경우 (userStore.user는 있지만 survey_completed가 false)
+    // surveyData를 초기 상태로 둠 (이미 초기화되어 있음)
+  } else if (!userStore.isLogin) {
+    // 로그인이 안되어있으면 로그인 페이지로
+    router.push("/login");
   }
-})
+});
 </script>
 
 <style scoped>
@@ -551,7 +752,11 @@ onMounted(async () => {
 
 .option-card:has(.option-input:checked) {
   border-color: #667eea;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.1) 0%,
+    rgba(118, 75, 162, 0.1) 100%
+  );
 }
 
 .option-content {
@@ -671,23 +876,23 @@ onMounted(async () => {
   .survey-page {
     padding: 1rem 0;
   }
-  
+
   .survey-header {
     padding: 1.5rem;
   }
-  
+
   .survey-title {
     font-size: 1.5rem;
   }
-  
+
   .survey-form {
     padding: 1.5rem;
   }
-  
+
   .options-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .modal-buttons {
     flex-direction: column;
   }

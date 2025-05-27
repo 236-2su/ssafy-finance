@@ -11,7 +11,7 @@
 
     <div class="container">
       <div class="content-wrapper">
-        <!-- 현재 가격 카드 -->
+        <!-- 현재 가격 카드 (기존과 동일) -->
         <div class="price-cards">
           <div class="price-card gold-card">
             <div class="price-header">
@@ -63,35 +63,20 @@
           <div class="chart-header">
             <h2 class="section-title">가격 변동 차트</h2>
             <div class="chart-controls">
-              <!-- 자산 선택 -->
               <div class="control-group">
                 <label class="control-label">자산 선택</label>
-                <select v-model="asset" @change="fetchData" class="control-select">
+                <select v-model="asset" class="control-select">
                   <option value="gold">금 (Gold)</option>
                   <option value="silver">은 (Silver)</option>
                 </select>
               </div>
-              
-              <!-- 시작일 -->
               <div class="control-group">
                 <label class="control-label">시작일</label>
-                <input
-                  type="date"
-                  v-model="startDate"
-                  @change="fetchData"
-                  class="control-input"
-                />
+                <input type="date" v-model="startDate" class="control-input" />
               </div>
-              
-              <!-- 종료일 -->
               <div class="control-group">
                 <label class="control-label">종료일</label>
-                <input
-                  type="date"
-                  v-model="endDate"
-                  @change="fetchData"
-                  class="control-input"
-                />
+                <input type="date" v-model="endDate" class="control-input" />
               </div>
             </div>
           </div>
@@ -101,30 +86,52 @@
               <div class="loading-spinner"></div>
               <p class="loading-text">차트 데이터를 불러오는 중...</p>
             </div>
-            
             <div v-else-if="noData" class="no-data-container">
               <div class="no-data-icon">
                 <i class="fas fa-chart-line fa-4x"></i>
               </div>
               <h3 class="no-data-title">데이터가 없습니다</h3>
               <p class="no-data-description">
-                선택한 기간에 데이터가 없습니다.<br>
-                샘플 데이터를 표시합니다.
+                선택한 기간에 데이터가 없거나 날짜 형식이 올바르지 않습니다.<br />
+                날짜를 확인하거나 다른 기간을 선택해주세요.
               </p>
               <button @click="useSampleData" class="sample-data-btn">
                 샘플 차트 보기
               </button>
             </div>
-            
             <div v-else class="chart-wrapper">
-              <canvas ref="chartCanvas"></canvas>
+              <!-- vue-chartjs 컴포넌트 사용 -->
+              <Line
+                v-if="chartData.datasets && chartData.datasets.length > 0"
+                :data="chartData"
+                :options="chartOptions"
+              />
             </div>
           </div>
         </div>
 
-        <!-- 사이드바 -->
+        <!-- 사이드바 (기존과 동일) -->
         <div class="sidebar">
-          <!-- 시장 정보 -->
+          <div class="widget period-widget">
+            <h4 class="widget-title">빠른 기간 선택</h4>
+            <div class="period-buttons">
+              <button @click="setQuickPeriod('1M')" class="period-btn">
+                1개월
+              </button>
+              <button @click="setQuickPeriod('3M')" class="period-btn">
+                3개월
+              </button>
+              <button @click="setQuickPeriod('6M')" class="period-btn">
+                6개월
+              </button>
+              <button @click="setQuickPeriod('1Y')" class="period-btn">
+                1년
+              </button>
+              <button @click="setQuickPeriod('YTD')" class="period-btn">
+                연초대비
+              </button>
+            </div>
+          </div>
           <div class="widget market-info-widget">
             <h4 class="widget-title">시장 정보</h4>
             <div class="market-stats">
@@ -146,58 +153,27 @@
               </div>
             </div>
           </div>
-
-          <!-- 투자 팁 -->
           <div class="widget tips-widget">
             <h4 class="widget-title">투자 팁</h4>
             <div class="tips-list">
               <div class="tip-item">
-                <i class="fas fa-lightbulb"></i>
-                <span>귀금속은 인플레이션 헤지 수단으로 활용됩니다</span>
+                <i class="fas fa-lightbulb"></i
+                ><span>귀금속은 인플레이션 헤지 수단으로 활용됩니다</span>
               </div>
               <div class="tip-item">
-                <i class="fas fa-lightbulb"></i>
-                <span>달러 약세 시 금 가격이 상승하는 경향이 있습니다</span>
+                <i class="fas fa-lightbulb"></i
+                ><span>달러 약세 시 금 가격이 상승하는 경향이 있습니다</span>
               </div>
               <div class="tip-item">
-                <i class="fas fa-lightbulb"></i>
-                <span>지정학적 리스크 증가 시 안전자산 선호도가 높아집니다</span>
+                <i class="fas fa-lightbulb"></i
+                ><span
+                  >지정학적 리스크 증가 시 안전자산 선호도가 높아집니다</span
+                >
               </div>
               <div class="tip-item">
-                <i class="fas fa-lightbulb"></i>
-                <span>중앙은행의 금리 정책을 주의 깊게 관찰하세요</span>
+                <i class="fas fa-lightbulb"></i
+                ><span>중앙은행의 금리 정책을 주의 깊게 관찰하세요</span>
               </div>
-            </div>
-          </div>
-
-          <!-- 관련 뉴스 -->
-          <div class="widget news-widget">
-            <h4 class="widget-title">관련 뉴스</h4>
-            <div class="news-list">
-              <div class="news-item">
-                <h5 class="news-title">금 가격, 연준 금리 인하 기대감에 상승</h5>
-                <p class="news-time">3시간 전</p>
-              </div>
-              <div class="news-item">
-                <h5 class="news-title">은 산업 수요 증가로 강세 지속</h5>
-                <p class="news-time">6시간 전</p>
-              </div>
-              <div class="news-item">
-                <h5 class="news-title">중국 중앙은행, 금 보유량 확대</h5>
-                <p class="news-time">1일 전</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 빠른 기간 선택 -->
-          <div class="widget period-widget">
-            <h4 class="widget-title">빠른 기간 선택</h4>
-            <div class="period-buttons">
-              <button @click="setQuickPeriod('1M')" class="period-btn">1개월</button>
-              <button @click="setQuickPeriod('3M')" class="period-btn">3개월</button>
-              <button @click="setQuickPeriod('6M')" class="period-btn">6개월</button>
-              <button @click="setQuickPeriod('1Y')" class="period-btn">1년</button>
-              <button @click="setQuickPeriod('YTD')" class="period-btn">연초대비</button>
             </div>
           </div>
         </div>
@@ -207,246 +183,293 @@
 </template>
 
 <script>
-import { ref, onMounted, watch, nextTick } from "vue";
-import { Chart, registerables } from "chart.js";
-Chart.register(...registerables);
+import { ref, onMounted, watch, computed } from "vue";
+import { Line } from "vue-chartjs";
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Filler, // Filler 플러그인 추가 (영역 채우기용)
+} from "chart.js";
+
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Filler
+);
 
 export default {
   name: "MetalPage",
+  components: {
+    Line,
+  },
   setup() {
     const asset = ref("gold");
     const startDate = ref("");
     const endDate = ref("");
-    const chart = ref(null);
-    const chartCanvas = ref(null);
     const noData = ref(false);
     const loading = ref(false);
 
+    const chartLabels = ref([]);
+    const chartPrices = ref([]);
+
+    // vue-chartjs를 위한 chartData computed property
+    const chartData = computed(() => ({
+      labels: chartLabels.value,
+      datasets: [
+        {
+          label: asset.value === "gold" ? "금 가격 (USD)" : "은 가격 (USD)",
+          data: chartPrices.value,
+          fill: true,
+          backgroundColor:
+            asset.value === "gold"
+              ? "rgba(255, 193, 7, 0.1)"
+              : "rgba(108, 117, 125, 0.1)",
+          borderColor: asset.value === "gold" ? "#ffc107" : "#6c757d",
+          borderWidth: 2, // 선 굵기 조정
+          pointBackgroundColor: asset.value === "gold" ? "#ffc107" : "#6c757d",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 1, // 포인트 테두리 굵기 조정
+          pointRadius: 3, // 포인트 크기 조정
+          pointHoverRadius: 5, // 호버 시 포인트 크기 조정
+          tension: 0.1, // 곡선 부드러움 정도 (0.4는 너무 큼)
+        },
+      ],
+    }));
+
+    // vue-chartjs를 위한 chartOptions ref
+    const chartOptions = ref({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "top",
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: { size: 14, weight: "bold" },
+          },
+        },
+        title: {
+          display: true,
+          text: computed(() =>
+            asset.value === "gold" ? "금 가격 추이" : "은 가격 추이"
+          ), // computed로 동적 제목
+          font: { size: 18, weight: "bold" },
+          padding: { top: 10, bottom: 20 }, // 패딩 조정
+        },
+        filler: {
+          // Filler 플러그인 옵션 (필요한 경우)
+          propagate: false,
+        },
+        tooltip: {
+          // 툴팁 설정 (필요한 경우)
+          mode: "index",
+          intersect: false,
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: "날짜",
+            font: { size: 14, weight: "bold" },
+          },
+          grid: { color: "rgba(0,0,0,0.05)" }, // 그리드 색상 연하게
+        },
+        y: {
+          title: {
+            display: true,
+            text: "가격 (USD)",
+            font: { size: 14, weight: "bold" },
+          },
+          grid: { color: "rgba(0,0,0,0.05)" }, // 그리드 색상 연하게
+        },
+      },
+      interaction: {
+        intersect: false,
+        mode: "index",
+      },
+      elements: {
+        point: {
+          hoverBackgroundColor: "#fff",
+          // hoverBorderWidth: 2 // 호버 시 포인트 테두리 (필요시)
+        },
+      },
+    });
+
+    const isValidDateString = (dateString) => {
+      if (!dateString) return true;
+      const regex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!regex.test(dateString)) return false;
+      const date = new Date(dateString);
+      const timestamp = date.getTime();
+      if (typeof timestamp !== "number" || Number.isNaN(timestamp))
+        return false;
+      return date.toISOString().startsWith(dateString);
+    };
+
     const fetchData = async () => {
+      if (
+        !isValidDateString(startDate.value) ||
+        !isValidDateString(endDate.value)
+      ) {
+        console.warn(
+          "날짜 형식이 올바르지 않습니다. (YYYY-MM-DD). API 호출을 중단합니다."
+        );
+        noData.value = true;
+        loading.value = false;
+        chartLabels.value = []; // 데이터 초기화
+        chartPrices.value = []; // 데이터 초기화
+        return;
+      }
+      if (
+        startDate.value &&
+        endDate.value &&
+        new Date(startDate.value) > new Date(endDate.value)
+      ) {
+        console.warn("시작일이 종료일보다 늦습니다. API 호출을 중단합니다.");
+        noData.value = true;
+        loading.value = false;
+        chartLabels.value = []; // 데이터 초기화
+        chartPrices.value = []; // 데이터 초기화
+        return;
+      }
+
       loading.value = true;
+      noData.value = false;
+
       try {
         let url = `/api/commodities/prices/?asset=${asset.value}`;
         if (startDate.value) url += `&start_date=${startDate.value}`;
         if (endDate.value) url += `&end_date=${endDate.value}`;
 
         const res = await fetch(url);
-        const text = await res.text();
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch {
-          console.error("🚨 JSON 파싱 실패:", text);
-          // API 에러 시 샘플 데이터 사용
-          useSampleData();
-          loading.value = false;
-          return;
-        }
+        const apiData = await res.json(); // .text() 대신 .json() 사용
+
         if (!res.ok) {
-          console.error("🚨 API 에러:", json.error);
-          // API 에러 시 샘플 데이터 사용
-          useSampleData();
-          loading.value = false;
-          return;
-        }
-
-        const data = json.data;
-        if (!data.length) {
-          if (chart.value) {
-            chart.value.destroy();
-            chart.value = null;
-          }
+          console.error(
+            "🚨 API 에러:",
+            res.status,
+            apiData.error || apiData.detail || "알 수 없는 에러"
+          );
           noData.value = true;
+          chartLabels.value = [];
+          chartPrices.value = [];
           loading.value = false;
           return;
         }
-        noData.value = false;
 
-        const labels = data.map((i) => i.date);
-        const prices = data.map((i) => i.price);
-        await nextTick();
-        renderChart(labels, prices);
-        loading.value = false;
+        const data = apiData.data;
+        if (!data || !data.length) {
+          noData.value = true;
+          chartLabels.value = [];
+          chartPrices.value = [];
+        } else {
+          chartLabels.value = data.map((i) => i.date);
+          chartPrices.value = data.map((i) => i.price);
+          noData.value = false;
+        }
       } catch (err) {
-        console.error("🚨 네트워크 에러:", err);
-        // 네트워크 에러 시 샘플 데이터 사용
-        useSampleData();
+        console.error("🚨 네트워크 에러 또는 JSON 파싱 에러:", err);
+        noData.value = true;
+        chartLabels.value = [];
+        chartPrices.value = [];
+      } finally {
         loading.value = false;
       }
     };
 
     const useSampleData = () => {
+      loading.value = true;
       noData.value = false;
       const today = new Date();
       const labels = [];
       const prices = [];
-      
-      // 최근 30일간의 샘플 데이터 생성
       for (let i = 29; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        labels.push(date.toISOString().split('T')[0]);
-        
-        // 금/은 가격에 따른 기본값과 랜덤 변동
-        const basePrice = asset.value === 'gold' ? 2000 : 25;
+        labels.push(date.toISOString().split("T")[0]);
+        const basePrice = asset.value === "gold" ? 2000 : 25;
         const variation = (Math.random() - 0.5) * (basePrice * 0.1);
-        prices.push(basePrice + variation);
+        prices.push(parseFloat((basePrice + variation).toFixed(2)));
       }
-      
-      nextTick(() => {
-        renderChart(labels, prices);
-      });
-    };
-
-    const renderChart = (labels, dataPoints) => {
-      const canvasEl = chartCanvas.value;
-      if (chart.value) chart.value.destroy();
-      
-      const gradient = canvasEl.getContext('2d').createLinearGradient(0, 0, 0, 400);
-      if (asset.value === 'gold') {
-        gradient.addColorStop(0, 'rgba(255, 193, 7, 0.3)');
-        gradient.addColorStop(1, 'rgba(255, 193, 7, 0.05)');
-      } else {
-        gradient.addColorStop(0, 'rgba(108, 117, 125, 0.3)');
-        gradient.addColorStop(1, 'rgba(108, 117, 125, 0.05)');
-      }
-
-      chart.value = new Chart(canvasEl, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: asset.value === "gold" ? "금 가격 (USD)" : "은 가격 (USD)",
-              data: dataPoints,
-              fill: true,
-              backgroundColor: gradient,
-              borderColor: asset.value === "gold" ? "#ffc107" : "#6c757d",
-              borderWidth: 3,
-              pointBackgroundColor: asset.value === "gold" ? "#ffc107" : "#6c757d",
-              pointBorderColor: "#fff",
-              pointBorderWidth: 2,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              tension: 0.4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { 
-              position: "top",
-              labels: {
-                usePointStyle: true,
-                padding: 20,
-                font: {
-                  size: 14,
-                  weight: 'bold'
-                }
-              }
-            },
-            title: {
-              display: true,
-              text: asset.value === "gold" ? "금 가격 추이" : "은 가격 추이",
-              font: {
-                size: 18,
-                weight: 'bold'
-              },
-              padding: 20
-            },
-          },
-          scales: {
-            x: { 
-              title: { 
-                display: true, 
-                text: "날짜",
-                font: {
-                  size: 14,
-                  weight: 'bold'
-                }
-              },
-              grid: {
-                color: 'rgba(0,0,0,0.1)'
-              }
-            },
-            y: { 
-              title: { 
-                display: true, 
-                text: "가격 (USD)",
-                font: {
-                  size: 14,
-                  weight: 'bold'
-                }
-              },
-              grid: {
-                color: 'rgba(0,0,0,0.1)'
-              }
-            },
-          },
-          interaction: {
-            intersect: false,
-            mode: 'index'
-          },
-          elements: {
-            point: {
-              hoverBackgroundColor: '#fff'
-            }
-          }
-        },
-      });
-    };
-
-    const setQuickPeriod = (period) => {
-      const today = new Date();
-      const end = today.toISOString().split('T')[0];
-      let start;
-
-      switch (period) {
-        case '1M':
-          start = new Date(today.setMonth(today.getMonth() - 1)).toISOString().split('T')[0];
-          break;
-        case '3M':
-          start = new Date(today.setMonth(today.getMonth() - 3)).toISOString().split('T')[0];
-          break;
-        case '6M':
-          start = new Date(today.setMonth(today.getMonth() - 6)).toISOString().split('T')[0];
-          break;
-        case '1Y':
-          start = new Date(today.setFullYear(today.getFullYear() - 1)).toISOString().split('T')[0];
-          break;
-        case 'YTD':
-          start = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0];
-          break;
-      }
-
-      startDate.value = start;
-      endDate.value = end;
-      fetchData();
+      chartLabels.value = labels;
+      chartPrices.value = prices;
+      loading.value = false;
     };
 
     onMounted(() => {
-      // 페이지 로드 시 샘플 데이터로 시작
-      useSampleData();
+      const today = new Date();
+      endDate.value = today.toISOString().split("T")[0];
+      const priorDate = new Date();
+      priorDate.setMonth(priorDate.getMonth() - 1);
+      startDate.value = priorDate.toISOString().split("T")[0];
+      // fetchData는 watch에 의해 즉시 호출됨 (immediate: true)
     });
-    
-    watch([asset, startDate, endDate], fetchData);
 
-    return { 
-      asset, 
-      startDate, 
-      endDate, 
-      chartCanvas, 
-      noData, 
+    watch([asset, startDate, endDate], fetchData, {
+      immediate: true,
+      deep: true,
+    });
+
+    const setQuickPeriod = (period) => {
+      const today = new Date();
+      endDate.value = today.toISOString().split("T")[0];
+      let start;
+      const baseDateForStart = new Date();
+      switch (period) {
+        case "1M":
+          baseDateForStart.setMonth(baseDateForStart.getMonth() - 1);
+          break;
+        case "3M":
+          baseDateForStart.setMonth(baseDateForStart.getMonth() - 3);
+          break;
+        case "6M":
+          baseDateForStart.setMonth(baseDateForStart.getMonth() - 6);
+          break;
+        case "1Y":
+          baseDateForStart.setFullYear(baseDateForStart.getFullYear() - 1);
+          break;
+        case "YTD":
+          start = new Date(baseDateForStart.getFullYear(), 0, 1)
+            .toISOString()
+            .split("T")[0];
+          break;
+      }
+      if (period !== "YTD") {
+        start = baseDateForStart.toISOString().split("T")[0];
+      }
+      startDate.value = start;
+    };
+
+    return {
+      asset,
+      startDate,
+      endDate,
+      noData,
       loading,
+      chartData,
+      chartOptions,
       setQuickPeriod,
-      useSampleData
+      useSampleData,
     };
   },
 };
 </script>
 
 <style scoped>
+/* 스타일은 기존과 동일하게 유지 */
 .metal-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -467,12 +490,12 @@ export default {
   font-weight: 800;
   color: white;
   margin-bottom: 20px;
-  text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .hero-subtitle {
   font-size: 1.2rem;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 40px;
   line-height: 1.6;
 }
@@ -484,7 +507,7 @@ export default {
 }
 
 .content-wrapper {
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 30px 30px 0 0;
   padding: 40px;
   margin-top: -20px;
@@ -506,14 +529,14 @@ export default {
   background: white;
   border-radius: 20px;
   padding: 30px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }
 
 .price-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -531,7 +554,7 @@ export default {
 
 .price-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
 }
 
 .price-header {
@@ -628,7 +651,7 @@ export default {
 }
 
 .section-title::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -677,7 +700,7 @@ export default {
   background: white;
   border-radius: 15px;
   padding: 30px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
   min-height: 400px;
 }
 
@@ -700,8 +723,12 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -767,7 +794,7 @@ export default {
   background: white;
   border-radius: 15px;
   padding: 25px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
 .widget-title {
@@ -797,7 +824,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .stat-item:last-child {
@@ -882,7 +909,7 @@ export default {
 }
 
 .period-btn {
-  background: rgba(255,255,255,0.8);
+  background: rgba(255, 255, 255, 0.8);
   border: none;
   color: #8b4513;
   padding: 10px;
@@ -902,28 +929,28 @@ export default {
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .content-wrapper {
     grid-template-columns: 1fr;
     padding: 20px;
   }
-  
+
   .price-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .chart-controls {
     flex-direction: column;
   }
-  
+
   .chart-section {
     grid-column: 1;
   }
-  
+
   .sidebar {
     grid-column: 1;
   }
-  
+
   .period-buttons {
     grid-template-columns: 1fr;
   }

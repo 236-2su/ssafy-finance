@@ -8,11 +8,41 @@
       </div>
       <div class="mb-3">
         <label class="form-label">집 주소</label>
-        <input type="text" v-model="homeAddress" class="form-control" />
+        <div class="input-group">
+          <input
+            type="text"
+            v-model="homeAddress"
+            class="form-control"
+            placeholder="주소 검색 버튼을 이용해주세요"
+            readonly
+          />
+          <button
+            type="button"
+            @click="openDaumPostcode('home')"
+            class="btn btn-outline-secondary"
+          >
+            주소 검색
+          </button>
+        </div>
       </div>
       <div class="mb-3">
         <label class="form-label">회사 주소</label>
-        <input type="text" v-model="companyAddress" class="form-control" />
+        <div class="input-group">
+          <input
+            type="text"
+            v-model="companyAddress"
+            class="form-control"
+            placeholder="주소 검색 버튼을 이용해주세요"
+            readonly
+          />
+          <button
+            type="button"
+            @click="openDaumPostcode('company')"
+            class="btn btn-outline-secondary"
+          >
+            주소 검색
+          </button>
+        </div>
       </div>
 
       <!-- 비밀번호 변경 (선택) -->
@@ -56,6 +86,33 @@ onMounted(async () => {
     error.value = "사용자 정보를 불러오지 못했습니다.";
   }
 });
+
+const openDaumPostcode = (type) => {
+  new daum.Postcode({
+    oncomplete: function (data) {
+      let fullAddress = data.roadAddress; // 도로명 주소 변수
+      let extraAddress = ""; // 참고항목 변수
+
+      if (data.bname !== "" && /[동|로|가]$/g.test(data.bname)) {
+        extraAddress += data.bname;
+      }
+      if (data.buildingName !== "" && data.apartment === "Y") {
+        extraAddress +=
+          extraAddress !== "" ? ", " + data.buildingName : data.buildingName;
+      }
+      if (extraAddress !== "") {
+        extraAddress = " (" + extraAddress + ")";
+      }
+      fullAddress += extraAddress;
+
+      if (type === "home") {
+        homeAddress.value = fullAddress;
+      } else if (type === "company") {
+        companyAddress.value = fullAddress;
+      }
+    },
+  }).open();
+};
 
 const updateProfile = async () => {
   try {
